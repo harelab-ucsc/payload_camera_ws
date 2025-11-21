@@ -1,0 +1,16 @@
+package.xml
+setup.cfg
+setup.py
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/PKG-INFO
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/dependency_links.txt
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/entry_points.txt
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/requires.txt
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/top_level.txt
+../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/zip-safe
+resource/stamp_and_split_cam1
+stamp_and_split_cam1/__init__.py
+stamp_and_split_cam1/split_and_stamp.py
+test/test_copyright.py
+test/test_flake8.py
+test/test_pep257.py

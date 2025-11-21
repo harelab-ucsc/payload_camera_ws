@@ -1,0 +1,28 @@
+[7.875s] Invoking command in '/home/pi4/camera_ws/src/stamp_and_split_cam1': PYTHONPATH=/home/pi4/camera_ws/build/stamp_and_split_cam1/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/install/stamp_and_split_cam1/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/stamp_and_split_cam1 build --build-base /home/pi4/camera_ws/build/stamp_and_split_cam1/build install --record /home/pi4/camera_ws/build/stamp_and_split_cam1/install.log --single-version-externally-managed install_data
+[10.894s] running egg_info
+[10.896s] creating ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info
+[11.023s] writing ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/PKG-INFO
+[11.027s] writing dependency_links to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/dependency_links.txt
+[11.028s] writing entry points to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/entry_points.txt
+[11.028s] writing requirements to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/requires.txt
+[11.028s] writing top-level names to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/top_level.txt
+[11.028s] writing manifest file '../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt'
+[11.287s] reading manifest file '../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt'
+[11.289s] writing manifest file '../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt'
+[11.290s] running build
+[11.290s] running build_py
+[11.291s] creating /home/pi4/camera_ws/build/stamp_and_split_cam1/build
+[11.291s] creating /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib
+[11.292s] creating /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib/stamp_and_split_cam1
+[11.292s] copying stamp_and_split_cam1/__init__.py -> /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib/stamp_and_split_cam1
+[11.293s] copying stamp_and_split_cam1/split_and_stamp.py -> /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib/stamp_and_split_cam1
+[11.296s] running install
+[11.325s] running install_lib
+[11.460s] running install_data
+[11.461s] running install_egg_info
+[11.686s] removing '/home/pi4/camera_ws/install/stamp_and_split_cam1/lib/python3.11/site-packages/stamp_and_split_cam1-0.0.0-py3.11.egg-info' (and everything under it)
+[11.687s] Copying ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info to /home/pi4/camera_ws/install/stamp_and_split_cam1/lib/python3.11/site-packages/stamp_and_split_cam1-0.0.0-py3.11.egg-info
+[11.689s] running install_scripts
+[12.193s] Installing split_and_stamp script to /home/pi4/camera_ws/install/stamp_and_split_cam1/lib/stamp_and_split_cam1
+[12.196s] writing list of installed files to '/home/pi4/camera_ws/build/stamp_and_split_cam1/install.log'
+[12.459s] Invoked command in '/home/pi4/camera_ws/src/stamp_and_split_cam1' returned '0': PYTHONPATH=/home/pi4/camera_ws/build/stamp_and_split_cam1/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/install/stamp_and_split_cam1/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/stamp_and_split_cam1 build --build-base /home/pi4/camera_ws/build/stamp_and_split_cam1/build install --record /home/pi4/camera_ws/build/stamp_and_split_cam1/install.log --single-version-externally-managed install_data

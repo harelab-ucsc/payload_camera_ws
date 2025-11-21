@@ -1,0 +1,2 @@
+[console_scripts]
+split_and_stamp = stamp_and_split_cam1.split_and_stamp:main

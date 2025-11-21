@@ -1,0 +1,26 @@
+running egg_info
+creating ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info
+writing ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/PKG-INFO
+writing dependency_links to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/dependency_links.txt
+writing entry points to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/entry_points.txt
+writing requirements to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/requires.txt
+writing top-level names to ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/top_level.txt
+writing manifest file '../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt'
+reading manifest file '../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt'
+writing manifest file '../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/pi4/camera_ws/build/stamp_and_split_cam1/build
+creating /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib
+creating /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib/stamp_and_split_cam1
+copying stamp_and_split_cam1/__init__.py -> /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib/stamp_and_split_cam1
+copying stamp_and_split_cam1/split_and_stamp.py -> /home/pi4/camera_ws/build/stamp_and_split_cam1/build/lib/stamp_and_split_cam1
+running install
+running install_lib
+running install_data
+running install_egg_info
+removing '/home/pi4/camera_ws/install/stamp_and_split_cam1/lib/python3.11/site-packages/stamp_and_split_cam1-0.0.0-py3.11.egg-info' (and everything under it)
+Copying ../../build/stamp_and_split_cam1/stamp_and_split_cam1.egg-info to /home/pi4/camera_ws/install/stamp_and_split_cam1/lib/python3.11/site-packages/stamp_and_split_cam1-0.0.0-py3.11.egg-info
+running install_scripts
+Installing split_and_stamp script to /home/pi4/camera_ws/install/stamp_and_split_cam1/lib/stamp_and_split_cam1
+writing list of installed files to '/home/pi4/camera_ws/build/stamp_and_split_cam1/install.log'

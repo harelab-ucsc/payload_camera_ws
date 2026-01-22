@@ -1,0 +1,7 @@
+# camera_ws - .gitignore
+
+## build
+build/*
+install/*
+log/*
+

@@ -74,4 +74,3 @@ def generate_launch_description():
         stamp_split,
         as7265x,
     ])
-

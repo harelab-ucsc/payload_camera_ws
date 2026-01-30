@@ -1,170 +1,53 @@
-#!/usr/bin/env python3
-import re
-import subprocess
-import threading
-import time
-
-import rclpy
-from rclpy.node import Node
-from builtin_interfaces.msg import Time
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
 
-class PpsTimePub(Node):
-    def __init__(self):
-        super().__init__("pps_time_pub")
-        self.pub = self.create_publisher(Time, "/pps/time", 10)
+def generate_launch_description():
+    # 1) PPS Publisher Node
+    pps = Node(
+        package="pps_time_pub",
+        executable="pps_time_pub",
+        name="pps_time_pub",
+        output="screen",
+    )
 
-        # ---------- Parameters ----------
-        self.declare_parameter("pps_device", "/dev/pps0")
-        self.declare_parameter("pps_topic", "/pps/time")
+    # 2) Camera Node (raw image)
+    cam0 = Node(
+        package="camera_ros",
+        executable="camera_node",
+        name="camera_node",
+        namespace="cam0",
+        output="screen",
+        parameters=[
+            {"camera": 0},
+            {"role": "viewfinder"},
+            {"width": 5120},
+            {"height": 800},
+            {"frame_id": "cam0_optical_frame"},
+        ],
+    )
 
-        # Script that *generates* the PPS pulses (your rpi_pwm_control.py)
-        self.declare_parameter("pwm_script", "/home/pi4/rpi_pwm_control.py")
-        self.declare_parameter("pwm_python", "python3")
-        self.declare_parameter("start_pwm", True)
-        self.declare_parameter("pwm_start_delay_s", 0.25)
+    # 3) Stamping + splitting node (stamp raw images with PPS)
+    stamp_split = Node(
+        package="stamp_and_split_cam1",
+        executable="pps_stamp_and_split",
+        name="pps_stamp_and_split",
+        namespace="cam0",
+        output="screen",
+        parameters=[
+            {"in_topic": "/cam0/camera_node/image_raw/compressed"},
+            {"qos_depth": 10},
+        ],
+        remappings=[
+            ("image_raw_stamped", "img0"),
+            ("image_copy_1", "img1"),
+            ("image_copy_2", "img2"),
+            ("image_copy_3", "img3"),
+        ],
+    )
 
-        # Whether to run ppstest with sudo
-        # (Recommended: fix perms so you can set this False)
-        self.declare_parameter("use_sudo", True)
-
-        self.pps_device = self.get_parameter("pps_device").value
-        self.pps_topic = self.get_parameter("pps_topic").value
-
-        # Re-create publisher on configured topic (if user overrides)
-        if self.pps_topic != "/pps/time":
-            self.pub = self.create_publisher(Time, self.pps_topic, 10)
-
-        self.stop_evt = threading.Event()
-        self.pwm_proc = None
-        self.ppstest_proc = None
-
-        self.get_logger().info(
-            f"pps_time_pub starting. device={self.pps_device} topic={self.pps_topic}"
-        )
-
-        self.th = threading.Thread(target=self._run, daemon=True)
-        self.th.start()
-
-    def _run(self):
-        # 1) Start PWM generator script (if enabled)
-        if bool(self.get_parameter("start_pwm").value):
-            py = self.get_parameter("pwm_python").value
-            script = self.get_parameter("pwm_script").value
-
-            self.get_logger().info(f"Starting PWM generator: {py} {script}")
-            try:
-                self.pwm_proc = subprocess.Popen(
-                    [py, script],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                )
-            except Exception as e:
-                self.get_logger().error(f"Failed to start PWM generator script: {e}")
-                # We continue anyway in case PPS is coming from elsewhere
-
-            delay = float(self.get_parameter("pwm_start_delay_s").value)
-            time.sleep(max(0.0, delay))
-
-        # 2) Start ppstest
-        use_sudo = bool(self.get_parameter("use_sudo").value)
-        cmd = ["ppstest", self.pps_device]
-        if use_sudo:
-            cmd = ["sudo"] + cmd
-
-        self.get_logger().info(f"Starting: {' '.join(cmd)}")
-
-        # Matches lines like:
-        # "source 0 - assert 1769636816.200814364, sequence: 22 - clear ..."
-        assert_re = re.compile(r"assert\s+(\d+)\.(\d+)")
-
-        try:
-            self.ppstest_proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-            )
-        except Exception as e:
-            self.get_logger().error(f"Failed to start ppstest: {e}")
-            return
-
-        saw_assert = False
-        last_warn = 0.0
-
-        for line in self.ppstest_proc.stdout:
-            if self.stop_evt.is_set():
-                break
-
-            # Helpful logging if it's timing out (your earlier error)
-            if "Connection timed out" in line:
-                now = time.time()
-                if now - last_warn > 2.0:
-                    self.get_logger().warn("ppstest: Connection timed out (no PPS edges yet)")
-                    last_warn = now
-                continue
-
-            m = assert_re.search(line)
-            if not m:
-                continue
-
-            saw_assert = True
-
-            sec_str, nsec_str = m.group(1), m.group(2)
-            nsec_str = (nsec_str + "0" * 9)[:9]  # pad/truncate to 9 digits
-
-            t = Time()
-            t.sec = int(sec_str)
-            t.nanosec = int(nsec_str)
-            self.pub.publish(t)
-
-        # If ppstest exits
-        try:
-            rc = self.ppstest_proc.wait(timeout=1.0)
-        except Exception:
-            rc = None
-
-        if not saw_assert:
-            self.get_logger().warn(
-                "ppstest exited (or stopped) without receiving any asserts. "
-                "Likely PPS generation never started."
-            )
-        self.get_logger().warn(f"ppstest exited (rc={rc}); PPS publisher stopped")
-
-    def destroy_node(self):
-        self.stop_evt.set()
-
-        # Stop ppstest
-        if self.ppstest_proc is not None:
-            try:
-                self.ppstest_proc.terminate()
-            except Exception:
-                pass
-
-        # Stop PWM generator script
-        if self.pwm_proc is not None:
-            try:
-                self.pwm_proc.terminate()
-            except Exception:
-                pass
-
-        super().destroy_node()
-
-
-def main():
-    rclpy.init()
-    node = PpsTimePub()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()
+    return LaunchDescription([
+        pps,
+        cam0,
+        stamp_split,
+    ])

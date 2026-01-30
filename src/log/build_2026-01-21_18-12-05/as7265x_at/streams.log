@@ -1,0 +1,19 @@
+[8.804s] Invoking command in '/home/pi4/camera_ws/src/build/as7265x_at': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/pi4/camera_ws/src/build/as7265x_at/build --no-deps symlink_data --force
+[12.140s] running develop
+[14.401s] running egg_info
+[14.617s] writing as7265x_at.egg-info/PKG-INFO
+[14.618s] writing dependency_links to as7265x_at.egg-info/dependency_links.txt
+[14.619s] writing entry points to as7265x_at.egg-info/entry_points.txt
+[14.620s] writing requirements to as7265x_at.egg-info/requires.txt
+[14.621s] writing top-level names to as7265x_at.egg-info/top_level.txt
+[15.033s] reading manifest file 'as7265x_at.egg-info/SOURCES.txt'
+[15.034s] writing manifest file 'as7265x_at.egg-info/SOURCES.txt'
+[15.390s] running build_ext
+[15.393s] Creating /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x-at.egg-link (link to .)
+[15.395s] Installing as7265x_at_node script to /home/pi4/camera_ws/src/install/as7265x_at/lib/as7265x_at
+[15.397s] 
+[15.402s] Installed /home/pi4/camera_ws/src/build/as7265x_at
+[15.405s] running symlink_data
+[15.406s] symbolically linking /home/pi4/camera_ws/src/build/as7265x_at/resource/as7265x_at -> /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index/resource_index/packages
+[15.407s] symbolically linking /home/pi4/camera_ws/src/build/as7265x_at/package.xml -> /home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at
+[15.715s] Invoked command in '/home/pi4/camera_ws/src/build/as7265x_at' returned '0': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/pi4/camera_ws/src/build/as7265x_at/build --no-deps symlink_data --force

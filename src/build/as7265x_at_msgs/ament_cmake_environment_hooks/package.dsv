@@ -1,0 +1,4 @@
+source;share/as7265x_at_msgs/local_setup.bash
+source;share/as7265x_at_msgs/local_setup.dsv
+source;share/as7265x_at_msgs/local_setup.sh
+source;share/as7265x_at_msgs/local_setup.zsh

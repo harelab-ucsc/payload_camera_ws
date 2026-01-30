@@ -1,0 +1,234 @@
+[0.874s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--symlink-install', '--packages-select', 'as7265x_at']
+[0.875s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=True, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=4, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['as7265x_at'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7f85aa8190>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7f85a97a50>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7f85a97a50>>, mixin_verb=('build',))
+[1.974s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[1.974s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[1.974s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[1.974s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[1.974s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[1.975s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[1.975s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/pi4/camera_ws/src'
+[1.976s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[1.976s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[1.976s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[1.976s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[1.976s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[1.977s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[1.977s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[1.977s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[1.977s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[2.058s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[2.058s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[2.058s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[2.058s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[2.058s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[2.059s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extensions ['ignore', 'ignore_ament_install']
+[2.059s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extension 'ignore'
+[2.059s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extension 'ignore_ament_install'
+[2.060s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extensions ['colcon_pkg']
+[2.060s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extension 'colcon_pkg'
+[2.060s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extensions ['colcon_meta']
+[2.060s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extension 'colcon_meta'
+[2.060s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extensions ['ros']
+[2.060s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at) by extension 'ros'
+[2.070s] DEBUG:colcon.colcon_core.package_identification:Package 'as7265x_at' with type 'ros.ament_python' and name 'as7265x_at'
+[2.071s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extensions ['ignore', 'ignore_ament_install']
+[2.071s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extension 'ignore'
+[2.071s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extension 'ignore_ament_install'
+[2.071s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extensions ['colcon_pkg']
+[2.071s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extension 'colcon_pkg'
+[2.072s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extensions ['colcon_meta']
+[2.072s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extension 'colcon_meta'
+[2.072s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extensions ['ros']
+[2.072s] Level 1:colcon.colcon_core.package_identification:_identify(as7265x_at_msgs) by extension 'ros'
+[2.074s] DEBUG:colcon.colcon_core.package_identification:Package 'as7265x_at_msgs' with type 'ros.ament_cmake' and name 'as7265x_at_msgs'
+[2.074s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[2.075s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[2.075s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[2.075s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extensions ['ignore', 'ignore_ament_install']
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extension 'ignore'
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extension 'ignore_ament_install'
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extensions ['colcon_pkg']
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extension 'colcon_pkg'
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extensions ['colcon_meta']
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extension 'colcon_meta'
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extensions ['ros']
+[2.076s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros) by extension 'ros'
+[2.086s] DEBUG:colcon.colcon_core.package_identification:Package 'camera_ros' with type 'ros.ament_cmake' and name 'camera_ros'
+[2.087s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extensions ['ignore', 'ignore_ament_install']
+[2.087s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extension 'ignore'
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extension 'ignore_ament_install'
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extensions ['colcon_pkg']
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extension 'colcon_pkg'
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extensions ['colcon_meta']
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extension 'colcon_meta'
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extensions ['ros']
+[2.088s] Level 1:colcon.colcon_core.package_identification:_identify(camera_ros_bringup) by extension 'ros'
+[2.090s] DEBUG:colcon.colcon_core.package_identification:Package 'camera_ros_bringup' with type 'ros.ament_cmake' and name 'camera_ros_bringup'
+[2.091s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[2.091s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[2.091s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[2.092s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[2.092s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[2.092s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[2.092s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extensions ['ignore', 'ignore_ament_install']
+[2.092s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'ignore'
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'ignore_ament_install'
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extensions ['colcon_pkg']
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'colcon_pkg'
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extensions ['colcon_meta']
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'colcon_meta'
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extensions ['ros']
+[2.093s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'ros'
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extensions ['cmake', 'python']
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'cmake'
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'python'
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extensions ['python_setup_py']
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(multispec) by extension 'python_setup_py'
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extensions ['ignore', 'ignore_ament_install']
+[2.094s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extension 'ignore'
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extension 'ignore_ament_install'
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extensions ['colcon_pkg']
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extension 'colcon_pkg'
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extensions ['colcon_meta']
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extension 'colcon_meta'
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extensions ['ros']
+[2.095s] Level 1:colcon.colcon_core.package_identification:_identify(stamp_and_split_cam1) by extension 'ros'
+[2.097s] DEBUG:colcon.colcon_core.package_identification:Package 'stamp_and_split_cam1' with type 'ros.ament_python' and name 'stamp_and_split_cam1'
+[2.098s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extensions ['ignore', 'ignore_ament_install']
+[2.098s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'ignore'
+[2.098s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'ignore_ament_install'
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extensions ['colcon_pkg']
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'colcon_pkg'
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extensions ['colcon_meta']
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'colcon_meta'
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extensions ['ros']
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'ros'
+[2.099s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extensions ['cmake', 'python']
+[2.100s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'cmake'
+[2.100s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'python'
+[2.100s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extensions ['python_setup_py']
+[2.100s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv) by extension 'python_setup_py'
+[2.100s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extensions ['ignore', 'ignore_ament_install']
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extension 'ignore'
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extension 'ignore_ament_install'
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extensions ['colcon_pkg']
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extension 'colcon_pkg'
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extensions ['colcon_meta']
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extension 'colcon_meta'
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extensions ['ros']
+[2.101s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/cv_bridge) by extension 'ros'
+[2.105s] DEBUG:colcon.colcon_core.package_identification:Package 'vision_opencv/cv_bridge' with type 'ros.ament_cmake' and name 'cv_bridge'
+[2.105s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extensions ['ignore', 'ignore_ament_install']
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extension 'ignore'
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extension 'ignore_ament_install'
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extensions ['colcon_pkg']
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extension 'colcon_pkg'
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extensions ['colcon_meta']
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extension 'colcon_meta'
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extensions ['ros']
+[2.106s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/image_geometry) by extension 'ros'
+[2.109s] DEBUG:colcon.colcon_core.package_identification:Package 'vision_opencv/image_geometry' with type 'ros.ament_cmake' and name 'image_geometry'
+[2.109s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extensions ['ignore', 'ignore_ament_install']
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extension 'ignore'
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extension 'ignore_ament_install'
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extensions ['colcon_pkg']
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extension 'colcon_pkg'
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extensions ['colcon_meta']
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extension 'colcon_meta'
+[2.110s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extensions ['ros']
+[2.111s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/opencv_tests) by extension 'ros'
+[2.112s] DEBUG:colcon.colcon_core.package_identification:Package 'vision_opencv/opencv_tests' with type 'ros.ament_python' and name 'opencv_tests'
+[2.113s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extensions ['ignore', 'ignore_ament_install']
+[2.113s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extension 'ignore'
+[2.113s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extension 'ignore_ament_install'
+[2.113s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extensions ['colcon_pkg']
+[2.114s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extension 'colcon_pkg'
+[2.114s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extensions ['colcon_meta']
+[2.114s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extension 'colcon_meta'
+[2.114s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extensions ['ros']
+[2.114s] Level 1:colcon.colcon_core.package_identification:_identify(vision_opencv/vision_opencv) by extension 'ros'
+[2.116s] DEBUG:colcon.colcon_core.package_identification:Package 'vision_opencv/vision_opencv' with type 'ros.ament_cmake' and name 'vision_opencv'
+[2.116s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[2.117s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[2.117s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[2.117s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[2.117s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[2.274s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'as7265x_at_msgs' in 'as7265x_at_msgs'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'cv_bridge' in 'vision_opencv/cv_bridge'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'image_geometry' in 'vision_opencv/image_geometry'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'stamp_and_split_cam1' in 'stamp_and_split_cam1'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'camera_ros' in 'camera_ros'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'opencv_tests' in 'vision_opencv/opencv_tests'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'vision_opencv' in 'vision_opencv/vision_opencv'
+[2.275s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'camera_ros_bringup' in 'camera_ros_bringup'
+[2.277s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[2.277s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[2.347s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 354 installed packages in /home/pi4/ros2_jazzy/install
+[2.353s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[2.452s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'cmake_args' from command line to 'None'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'cmake_target' from command line to 'None'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'cmake_clean_cache' from command line to 'False'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'cmake_clean_first' from command line to 'False'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'cmake_force_configure' from command line to 'False'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'ament_cmake_args' from command line to 'None'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'catkin_cmake_args' from command line to 'None'
+[2.453s] Level 5:colcon.colcon_core.verb:set package 'as7265x_at' build argument 'catkin_skip_building_tests' from command line to 'False'
+[2.453s] DEBUG:colcon.colcon_core.verb:Building package 'as7265x_at' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/pi4/camera_ws/src/build/as7265x_at', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/pi4/camera_ws/src/install/as7265x_at', 'merge_install': False, 'path': '/home/pi4/camera_ws/src/as7265x_at', 'symlink_install': True, 'test_result_base': None}
+[2.454s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[2.457s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[2.458s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/pi4/camera_ws/src/as7265x_at' with build type 'ament_python'
+[2.459s] Level 1:colcon.colcon_core.shell:create_environment_hook('as7265x_at', 'ament_prefix_path')
+[2.482s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[2.483s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/hook/ament_prefix_path.ps1'
+[2.486s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/hook/ament_prefix_path.dsv'
+[2.488s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/hook/ament_prefix_path.sh'
+[2.493s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.493s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[5.277s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/pi4/camera_ws/src/as7265x_at'
+[5.278s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[5.278s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[10.435s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/pi4/camera_ws/src/build/as7265x_at': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/pi4/camera_ws/src/build/as7265x_at/build --no-deps symlink_data
+[15.700s] Level 1:colcon.colcon_core.shell:create_environment_hook('as7265x_at', 'pythonpath_develop')
+[15.701s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/pi4/camera_ws/src/build/as7265x_at/share/as7265x_at/hook/pythonpath_develop.ps1'
+[15.703s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/pi4/camera_ws/src/build/as7265x_at' returned '0': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/pi4/camera_ws/src/build/as7265x_at/build --no-deps symlink_data
+[15.704s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/pi4/camera_ws/src/build/as7265x_at/share/as7265x_at/hook/pythonpath_develop.dsv'
+[15.706s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/pi4/camera_ws/src/build/as7265x_at/share/as7265x_at/hook/pythonpath_develop.sh'
+[15.730s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at' for CMake module files
+[15.731s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at' for CMake config files
+[15.733s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at/lib'
+[15.734s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at/bin'
+[15.734s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at/lib/pkgconfig/as7265x_at.pc'
+[15.735s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages'
+[15.735s] Level 1:colcon.colcon_core.shell:create_environment_hook('as7265x_at', 'pythonpath')
+[15.736s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/hook/pythonpath.ps1'
+[15.738s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/hook/pythonpath.dsv'
+[15.739s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/hook/pythonpath.sh'
+[15.742s] Level 1:colcon.colcon_core.environment:checking '/home/pi4/camera_ws/src/install/as7265x_at/bin'
+[15.743s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(as7265x_at)
+[15.744s] INFO:colcon.colcon_core.shell:Creating package script '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/package.ps1'
+[15.747s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/package.dsv'
+[15.749s] INFO:colcon.colcon_core.shell:Creating package script '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/package.sh'
+[15.752s] INFO:colcon.colcon_core.shell:Creating package script '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/package.bash'
+[15.754s] INFO:colcon.colcon_core.shell:Creating package script '/home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at/package.zsh'
+[15.757s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/pi4/camera_ws/src/install/as7265x_at/share/colcon-core/packages/as7265x_at)
+[15.758s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[15.758s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[15.759s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[15.760s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[15.803s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.notify_send': Could not find 'notify-send'
+[15.803s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[15.804s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[15.804s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[15.807s] DEBUG:colcon.colcon_notification.desktop_notification.notify2:Failed to initialize notify2: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.Notifications was not provided by any .service files
+[15.807s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[15.808s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/pi4/camera_ws/src/install/local_setup.ps1'
+[15.811s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/pi4/camera_ws/src/install/_local_setup_util_ps1.py'
+[15.815s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/pi4/camera_ws/src/install/setup.ps1'
+[15.855s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/pi4/camera_ws/src/install/local_setup.sh'
+[15.857s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/pi4/camera_ws/src/install/_local_setup_util_sh.py'
+[15.859s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/pi4/camera_ws/src/install/setup.sh'
+[15.898s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/pi4/camera_ws/src/install/local_setup.bash'
+[15.900s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/pi4/camera_ws/src/install/setup.bash'
+[15.940s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/pi4/camera_ws/src/install/local_setup.zsh'
+[15.941s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/pi4/camera_ws/src/install/setup.zsh'

@@ -1,0 +1,1 @@
+/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake

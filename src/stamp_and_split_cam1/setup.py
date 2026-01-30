@@ -1,3 +1,8 @@
+"""setup.py
+
+@date       12 Jan 2026
+@version    1.0.1
+"""
 from setuptools import find_packages, setup
 
 package_name = 'stamp_and_split_cam1'
@@ -22,9 +27,11 @@ setup(
             'pytest',
         ],
     },
-    entry_points={
-        'console_scripts': [
-		'split_and_stamp = stamp_and_split_cam1.split_and_stamp:main',
-        ],
-    },
+ entry_points={
+    'console_scripts': [
+        'split_and_stamp = stamp_and_split_cam1.split_and_stamp:main',
+        'pps_stamp_and_split = stamp_and_split_cam1.pps_stamp_and_split:main',
+    ],
+},
+
 )

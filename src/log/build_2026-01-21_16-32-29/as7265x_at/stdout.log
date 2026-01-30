@@ -1,0 +1,22 @@
+running develop
+running egg_info
+creating as7265x_at.egg-info
+writing as7265x_at.egg-info/PKG-INFO
+writing dependency_links to as7265x_at.egg-info/dependency_links.txt
+writing entry points to as7265x_at.egg-info/entry_points.txt
+writing requirements to as7265x_at.egg-info/requires.txt
+writing top-level names to as7265x_at.egg-info/top_level.txt
+writing manifest file 'as7265x_at.egg-info/SOURCES.txt'
+reading manifest file 'as7265x_at.egg-info/SOURCES.txt'
+writing manifest file 'as7265x_at.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x-at.egg-link (link to .)
+Installing as7265x_at_node script to /home/pi4/camera_ws/src/install/as7265x_at/lib/as7265x_at
+
+Installed /home/pi4/camera_ws/src/build/as7265x_at
+running symlink_data
+creating /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index
+creating /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index/resource_index
+creating /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index/resource_index/packages
+symbolically linking /home/pi4/camera_ws/src/build/as7265x_at/resource/as7265x_at -> /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index/resource_index/packages
+symbolically linking /home/pi4/camera_ws/src/build/as7265x_at/package.xml -> /home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at

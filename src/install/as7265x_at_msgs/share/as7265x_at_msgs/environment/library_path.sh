@@ -1,0 +1,1 @@
+/home/pi4/ros2_jazzy/build/ament_package/ament_package/template/environment_hook/library_path.sh

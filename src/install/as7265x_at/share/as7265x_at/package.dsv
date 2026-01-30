@@ -1,0 +1,9 @@
+source;share/as7265x_at/hook/pythonpath.ps1
+source;share/as7265x_at/hook/pythonpath.dsv
+source;share/as7265x_at/hook/pythonpath.sh
+source;share/as7265x_at/hook/ament_prefix_path.ps1
+source;share/as7265x_at/hook/ament_prefix_path.dsv
+source;share/as7265x_at/hook/ament_prefix_path.sh
+source;../../build/as7265x_at/share/as7265x_at/hook/pythonpath_develop.ps1
+source;../../build/as7265x_at/share/as7265x_at/hook/pythonpath_develop.dsv
+source;../../build/as7265x_at/share/as7265x_at/hook/pythonpath_develop.sh

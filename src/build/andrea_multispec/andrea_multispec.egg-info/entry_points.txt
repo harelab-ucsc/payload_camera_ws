@@ -1,0 +1,2 @@
+[console_scripts]
+spectral_bridge = multispec.spectral_bridge:main

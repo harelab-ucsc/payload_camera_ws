@@ -1,0 +1,1 @@
+ament_cmake_symlink_install_targets("TARGET_FILES" "/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_generator_py/as7265x_at_msgs/as7265x_at_msgs_s__rosidl_typesupport_fastrtps_c.so" "TARGETS" "as7265x_at_msgs_s__rosidl_typesupport_fastrtps_c" "DESTINATION" "lib/python3.11/site-packages/as7265x_at_msgs")

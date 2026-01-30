@@ -1,0 +1,12 @@
+{
+  "package_name": "as7265x_at_msgs",
+  "output_dir": "/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_generator_type_description/as7265x_at_msgs",
+  "idl_tuples": [
+    "/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_adapter/as7265x_at_msgs:msg/AS7265xRaw.idl",
+    "/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_adapter/as7265x_at_msgs:msg/AS7265xCal.idl"
+  ],
+  "include_paths": [
+    "std_msgs:/home/pi4/ros2_jazzy/install/std_msgs/share/std_msgs",
+    "builtin_interfaces:/home/pi4/ros2_jazzy/install/builtin_interfaces/share/builtin_interfaces"
+  ]
+}

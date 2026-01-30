@@ -1,0 +1,32 @@
+running develop
+Removing /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x-at.egg-link (link to .)
+running egg_info
+writing ../build/as7265x_at/as7265x_at.egg-info/PKG-INFO
+writing dependency_links to ../build/as7265x_at/as7265x_at.egg-info/dependency_links.txt
+writing entry points to ../build/as7265x_at/as7265x_at.egg-info/entry_points.txt
+writing requirements to ../build/as7265x_at/as7265x_at.egg-info/requires.txt
+writing top-level names to ../build/as7265x_at/as7265x_at.egg-info/top_level.txt
+reading manifest file '../build/as7265x_at/as7265x_at.egg-info/SOURCES.txt'
+writing manifest file '../build/as7265x_at/as7265x_at.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/pi4/camera_ws/src/build/as7265x_at/build
+creating /home/pi4/camera_ws/src/build/as7265x_at/build/lib
+creating /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at
+copying as7265x_at/__init__.py -> /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at
+copying as7265x_at/as7265x_at_node.py -> /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at
+running install
+running install_lib
+creating /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at
+copying /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at/__init__.py -> /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at
+copying /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at/as7265x_at_node.py -> /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at
+byte-compiling /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at/__init__.py to __init__.cpython-311.pyc
+byte-compiling /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at/as7265x_at_node.py to as7265x_at_node.cpython-311.pyc
+running install_data
+copying resource/as7265x_at -> /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index/resource_index/packages
+copying package.xml -> /home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at
+running install_egg_info
+Copying ../build/as7265x_at/as7265x_at.egg-info to /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at-0.0.1-py3.11.egg-info
+running install_scripts
+Installing as7265x_at_node script to /home/pi4/camera_ws/src/install/as7265x_at/lib/as7265x_at
+writing list of installed files to '/home/pi4/camera_ws/src/build/as7265x_at/install.log'

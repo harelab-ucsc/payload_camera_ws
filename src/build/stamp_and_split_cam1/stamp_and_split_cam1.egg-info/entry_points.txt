@@ -1,0 +1,3 @@
+[console_scripts]
+pps_stamp_and_split = stamp_and_split_cam1.pps_stamp_and_split:main
+split_and_stamp = stamp_and_split_cam1.split_and_stamp:main

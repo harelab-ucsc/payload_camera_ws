@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "as7265x_at_msgs__py",
+		"source" : "/home/pi4/camera_ws/src/build/as7265x_at_msgs/as7265x_at_msgs__py"
+	}
+}

@@ -1,0 +1,36 @@
+[16.045s] Invoking command in '/home/pi4/camera_ws/src/build/as7265x_at': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/pi4/camera_ws/src/build/as7265x_at/build
+[20.611s] running develop
+[24.019s] Removing /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x-at.egg-link (link to .)
+[24.841s] Invoked command in '/home/pi4/camera_ws/src/build/as7265x_at' returned '0': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/pi4/camera_ws/src/build/as7265x_at/build
+[24.856s] Invoking command in '/home/pi4/camera_ws/src/as7265x_at': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/as7265x_at build --build-base /home/pi4/camera_ws/src/build/as7265x_at/build install --record /home/pi4/camera_ws/src/build/as7265x_at/install.log --single-version-externally-managed install_data --force
+[36.727s] running egg_info
+[41.017s] writing ../build/as7265x_at/as7265x_at.egg-info/PKG-INFO
+[41.028s] writing dependency_links to ../build/as7265x_at/as7265x_at.egg-info/dependency_links.txt
+[41.034s] writing entry points to ../build/as7265x_at/as7265x_at.egg-info/entry_points.txt
+[41.037s] writing requirements to ../build/as7265x_at/as7265x_at.egg-info/requires.txt
+[41.039s] writing top-level names to ../build/as7265x_at/as7265x_at.egg-info/top_level.txt
+[41.750s] reading manifest file '../build/as7265x_at/as7265x_at.egg-info/SOURCES.txt'
+[41.755s] writing manifest file '../build/as7265x_at/as7265x_at.egg-info/SOURCES.txt'
+[41.760s] running build
+[41.768s] running build_py
+[41.770s] creating /home/pi4/camera_ws/src/build/as7265x_at/build
+[41.773s] creating /home/pi4/camera_ws/src/build/as7265x_at/build/lib
+[41.776s] creating /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at
+[41.779s] copying as7265x_at/__init__.py -> /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at
+[41.785s] copying as7265x_at/as7265x_at_node.py -> /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at
+[41.787s] running install
+[41.803s] running install_lib
+[42.248s] creating /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at
+[42.257s] copying /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at/__init__.py -> /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at
+[42.264s] copying /home/pi4/camera_ws/src/build/as7265x_at/build/lib/as7265x_at/as7265x_at_node.py -> /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at
+[42.271s] byte-compiling /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at/__init__.py to __init__.cpython-311.pyc
+[42.273s] byte-compiling /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at/as7265x_at_node.py to as7265x_at_node.cpython-311.pyc
+[42.281s] running install_data
+[42.284s] copying resource/as7265x_at -> /home/pi4/camera_ws/src/install/as7265x_at/share/ament_index/resource_index/packages
+[42.295s] copying package.xml -> /home/pi4/camera_ws/src/install/as7265x_at/share/as7265x_at
+[42.297s] running install_egg_info
+[42.593s] Copying ../build/as7265x_at/as7265x_at.egg-info to /home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages/as7265x_at-0.0.1-py3.11.egg-info
+[42.600s] running install_scripts
+[43.603s] Installing as7265x_at_node script to /home/pi4/camera_ws/src/install/as7265x_at/lib/as7265x_at
+[43.605s] writing list of installed files to '/home/pi4/camera_ws/src/build/as7265x_at/install.log'
+[44.000s] Invoked command in '/home/pi4/camera_ws/src/as7265x_at' returned '0': PYTHONPATH=/home/pi4/camera_ws/src/build/as7265x_at/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi4/camera_ws/src/install/as7265x_at/lib/python3.11/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/as7265x_at build --build-base /home/pi4/camera_ws/src/build/as7265x_at/build install --record /home/pi4/camera_ws/src/build/as7265x_at/install.log --single-version-externally-managed install_data --force

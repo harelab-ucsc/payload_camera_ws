@@ -1,0 +1,1 @@
+/home/pi4/camera_ws/src/build/as7265x_at_msgs/ament_cmake_export_include_directories/ament_cmake_export_include_directories-extras.cmake

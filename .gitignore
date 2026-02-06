@@ -1,7 +1,10 @@
 # camera_ws - .gitignore
 
 ## build
-build/*
-install/*
-log/*
-
+build/
+install/
+log/
+.venv_cam/
+rosbag2_*/
+__pycache__/
+*.pyc

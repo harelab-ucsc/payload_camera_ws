@@ -1,6 +1,0 @@
-source;share/stamp_and_split_cam1/hook/pythonpath.ps1
-source;share/stamp_and_split_cam1/hook/pythonpath.dsv
-source;share/stamp_and_split_cam1/hook/pythonpath.sh
-source;share/stamp_and_split_cam1/hook/ament_prefix_path.ps1
-source;share/stamp_and_split_cam1/hook/ament_prefix_path.dsv
-source;share/stamp_and_split_cam1/hook/ament_prefix_path.sh

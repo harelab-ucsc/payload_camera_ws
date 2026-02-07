@@ -1,7 +1,0 @@
-{
-  "package_name": "as7265x_at_msgs",
-  "non_idl_tuples": [
-    "/home/pi4/camera_ws/src/as7265x_at_msgs:msg/AS7265xRaw.msg",
-    "/home/pi4/camera_ws/src/as7265x_at_msgs:msg/AS7265xCal.msg"
-  ]
-}

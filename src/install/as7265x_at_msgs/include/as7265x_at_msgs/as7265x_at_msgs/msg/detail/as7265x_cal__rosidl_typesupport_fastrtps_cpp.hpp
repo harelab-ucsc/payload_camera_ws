@@ -1,1 +1,0 @@
-/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_typesupport_fastrtps_cpp/as7265x_at_msgs/msg/detail/as7265x_cal__rosidl_typesupport_fastrtps_cpp.hpp

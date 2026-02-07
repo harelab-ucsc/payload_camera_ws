@@ -1,1 +1,0 @@
-/home/pi4/camera_ws/src/build/as7265x_at_msgs/rosidl_typesupport_introspection_c/as7265x_at_msgs/msg/rosidl_typesupport_introspection_c__visibility_control.h

@@ -1,9 +1,0 @@
-source;share/andrea_multispec/hook/pythonpath.ps1
-source;share/andrea_multispec/hook/pythonpath.dsv
-source;share/andrea_multispec/hook/pythonpath.sh
-source;share/andrea_multispec/hook/ament_prefix_path.ps1
-source;share/andrea_multispec/hook/ament_prefix_path.dsv
-source;share/andrea_multispec/hook/ament_prefix_path.sh
-source;../../build/andrea_multispec/share/andrea_multispec/hook/pythonpath_develop.ps1
-source;../../build/andrea_multispec/share/andrea_multispec/hook/pythonpath_develop.dsv
-source;../../build/andrea_multispec/share/andrea_multispec/hook/pythonpath_develop.sh

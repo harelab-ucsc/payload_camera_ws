@@ -1,1 +1,0 @@
-/home/pi4/camera_ws/src/build/andrea_multispec/launch/rgb_plus_as7265x.launch.py

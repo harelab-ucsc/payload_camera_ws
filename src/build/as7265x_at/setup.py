@@ -1,1 +1,0 @@
-/home/pi4/camera_ws/src/as7265x_at/setup.py

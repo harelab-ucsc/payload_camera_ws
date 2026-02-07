@@ -1,1 +1,0 @@
-/home/pi4/camera_ws/src/build/as7265x_at_msgs/ament_cmake_core/as7265x_at_msgsConfig-version.cmake

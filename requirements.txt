@@ -1,0 +1,3 @@
+# payload_camera_ws - requirements.txt
+
+rpi-hardware-pwm

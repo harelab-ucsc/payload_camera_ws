@@ -1,14 +1,41 @@
 # Docker Integration Testing
 
-Builds the workspace in a ROS2 Iron container and runs the pipeline test automatically.
+Builds the workspace in a ROS2 Iron container and runs the pipeline test as a separate step.
 
-## Build & test
+## Build
 
 ```bash
 docker build -f docker/Dockerfile -t payload_camera_ws:iron .
 ```
 
-The build runs `test_integration.py` as the final step — if it fails, the build fails.
+Tests are **not** run during the build by default.
+
+To run tests as part of the build (e.g. for a quick local check):
+
+```bash
+docker build -f docker/Dockerfile --build-arg RUN_TESTS=true -t payload_camera_ws:iron .
+```
+
+## Run the test
+
+```bash
+# Against the already-built image
+docker run --rm payload_camera_ws:iron bash -c \
+  ". /opt/ros/iron/setup.sh && \
+   . /payload_camera_ws/install/setup.sh && \
+   python3 -m pytest /payload_camera_ws/docker/test_integration.py -v"
+
+# Or inside a running container / with the workspace sourced locally
+source install/setup.bash
+python3 -m pytest docker/test_integration.py -v
+```
+
+## CI
+
+The GitHub Actions workflow (`.github/workflows/test.yml`) runs two steps on every push and pull request:
+
+1. **Build** — builds the Docker image
+2. **Run integration tests** — runs pytest in the built container as a separate step
 
 ## What the test does
 
@@ -18,14 +45,6 @@ Launches `fake_image_pub.py` (synthetic 5120×800 images + PPS timestamps) and `
 - Each slice is 1280×800 with correct encoding and step
 - PPS timestamp was applied (non-zero stamp)
 - Adjacent slices contain different pixel data (split actually happened)
-
-## Run the test manually
-
-```bash
-# inside the container, or with the workspace sourced
-source install/setup.bash
-python3 -m pytest docker/test_integration.py -v
-```
 
 ## Notes
 

@@ -53,11 +53,14 @@ RUN . /opt/ros/iron/setup.sh && \
         --packages-skip camera_ros camera_ros_bringup \
         --cmake-args -DCMAKE_BUILD_TYPE=Release
 
-# ─── Integration test ─────────────────────────────────────────────────────────
+# ─── Integration test (optional: pass --build-arg RUN_TESTS=true to enable) ───
 RUN pip3 install --no-cache-dir pytest
-RUN . /opt/ros/iron/setup.sh && \
-    . install/setup.sh && \
-    python3 -m pytest docker/test_integration.py -v
+ARG RUN_TESTS=false
+RUN if [ "$RUN_TESTS" = "true" ]; then \
+        . /opt/ros/iron/setup.sh && \
+        . install/setup.sh && \
+        python3 -m pytest docker/test_integration.py -v; \
+    fi
 
 # ─── Entrypoint ───────────────────────────────────────────────────────────────
 COPY docker/entrypoint.sh /entrypoint.sh

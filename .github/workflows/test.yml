@@ -1,0 +1,23 @@
+name: Integration Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          docker build -f docker/Dockerfile -t payload_camera_ws:iron .
+
+      - name: Run integration tests
+        run: |
+          docker run --rm payload_camera_ws:iron bash -c \
+            ". /opt/ros/iron/setup.sh && \
+             . /payload_camera_ws/install/setup.sh && \
+             python3 -m pytest /payload_camera_ws/docker/test_integration.py -v"

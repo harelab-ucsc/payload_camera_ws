@@ -57,9 +57,7 @@ RUN . /opt/ros/iron/setup.sh && \
 RUN pip3 install --no-cache-dir pytest
 ARG RUN_TESTS=false
 RUN if [ "$RUN_TESTS" = "true" ]; then \
-        . /opt/ros/iron/setup.sh && \
-        . install/setup.sh && \
-        python3 -m pytest docker/test_integration.py -v; \
+        bash docker/run_tests.sh; \
     fi
 
 # ─── Entrypoint ───────────────────────────────────────────────────────────────

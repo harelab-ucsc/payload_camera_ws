@@ -99,7 +99,9 @@ class PpsTimePub(Node):
             self.get_logger().info(f"Opened {self.pps_device} — waiting for PPS events")
 
             saw_assert = False
-            last_warn = 0.0
+            # Use -inf so the watchdog fires immediately on the first missed edge,
+            # then throttles to once per watchdog_interval_s regardless of saw_assert.
+            last_warn = float("-inf")
             last_edge = time.time()
             pub_count = 0
 
@@ -116,8 +118,7 @@ class PpsTimePub(Node):
                 now = time.time()
 
                 if edge is None:
-                    # No-edge timeout: fire watchdog if we haven't warned recently
-                    if not saw_assert or (now - last_warn > self.watchdog_interval):
+                    if now - last_warn > self.watchdog_interval:
                         self.get_logger().warn(
                             "No PPS edge received. Is the PWM generator running?"
                             f" (last edge {now - last_edge:.1f}s ago)"
@@ -127,7 +128,7 @@ class PpsTimePub(Node):
 
                 saw_assert = True
                 last_edge = now
-                last_warn = 0.0  # reset so next gap triggers immediately
+                last_warn = float("-inf")  # reset so next gap triggers immediately
 
                 t = Time()
                 t.sec = edge.assert_tu.sec

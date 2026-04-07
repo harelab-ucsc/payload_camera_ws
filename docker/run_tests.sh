@@ -10,6 +10,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TESTS_DIR="$SCRIPT_DIR/tests"
 
 # Source ROS2 and workspace environments
@@ -18,18 +19,22 @@ if [ -f /payload_camera_ws/install/setup.sh ]; then
     . /payload_camera_ws/install/setup.sh
 fi
 
-echo "[run_tests.sh] Discovering tests in $TESTS_DIR"
+echo "[run_tests.sh] Discovering tests"
 
-# Collect test files matching pytest naming conventions
-mapfile -t test_files < <(find "$TESTS_DIR" -name "test_*.py" -o -name "*_test.py" | sort)
+# Collect test files from docker/tests/ and all src/*/test/ directories
+mapfile -t test_files < <(find \
+    "$TESTS_DIR" \
+    "$WS_ROOT/src" \
+    \( -name "test_*.py" -o -name "*_test.py" \) \
+    | sort -u 2>/dev/null || true)
 
 if [ "${#test_files[@]}" -eq 0 ]; then
     echo "[run_tests.sh] No test files found in $TESTS_DIR"
     exit 0
 fi
 
-echo "[run_tests.sh] Found ${#test_files[@]} test file(s):"
+echo "[run_tests.sh] Found ${#test_files[@]} test file(s) across docker/tests/ and src/*/test/:"
 printf '  %s\n' "${test_files[@]}"
 echo ""
 
-python3 -m pytest "${test_files[@]}" -v -s
+python3 -m pytest --import-mode=importlib "${test_files[@]}" -v -s

@@ -15,9 +15,6 @@ jobs:
         run: |
           docker build -f docker/Dockerfile -t payload_camera_ws:iron .
 
-      - name: Run integration tests
+      - name: Run tests
         run: |
-          docker run --rm payload_camera_ws:iron bash -c \
-            ". /opt/ros/iron/setup.sh && \
-             . /payload_camera_ws/install/setup.sh && \
-             python3 -m pytest /payload_camera_ws/docker/test_integration.py -v"
+          docker run --rm payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh

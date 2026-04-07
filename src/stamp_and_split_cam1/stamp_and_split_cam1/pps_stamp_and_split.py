@@ -185,9 +185,23 @@ def main():
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
+    except rclpy.executors.ExternalShutdownException:
+        import logging
+        logging.getLogger(__name__).warning(
+            "rclpy context shut down externally (e.g. SIGTERM) — exiting cleanly"
+        )
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except rclpy._rclpy_pybind11.RCLError as e:
+            if "rcl_shutdown already called" in str(e):
+                import logging
+                logging.getLogger(__name__).warning(
+                    "rclpy context was already shut down before explicit shutdown call"
+                )
+            else:
+                raise
 
 
 if __name__ == "__main__":

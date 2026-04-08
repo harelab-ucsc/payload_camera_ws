@@ -102,17 +102,30 @@ def generate_launch_description():
 
     # ------------------------------------------------------------------
     # Sequencing:
-    #   t=0.0s   pps starts → v4l2 trigger_mode=1 on both subdevs → PWM starts
-    #   t=2.0s   cam0 + cam1 start together (triggers already armed)
-    #   t=4.0s   both stamp_split nodes start (cameras publishing by now)
+    #   t=0.0s   pps starts
+    #   t=2.0s   cam0 starts
+    #   t=4.0s   cam1 starts (staggered to avoid I2C init collision)
+    #   t=6.0s   both stamp_split nodes start
     # ------------------------------------------------------------------
-    delayed_cameras = RegisterEventHandler(
+    delayed_cam0 = RegisterEventHandler(
         OnProcessStart(
             target_action=pps,
             on_start=[
                 TimerAction(
                     period=2.0,
-                    actions=[cam0, cam1],
+                    actions=[cam0],
+                )
+            ],
+        )
+    )
+
+    delayed_cam1 = RegisterEventHandler(
+        OnProcessStart(
+            target_action=pps,
+            on_start=[
+                TimerAction(
+                    period=4.0,
+                    actions=[cam1],
                 )
             ],
         )
@@ -123,7 +136,7 @@ def generate_launch_description():
             target_action=pps,
             on_start=[
                 TimerAction(
-                    period=4.0,
+                    period=6.0,
                     actions=[stamp_split_cam0, stamp_split_cam1],
                 )
             ],
@@ -132,6 +145,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         pps,
-        delayed_cameras,
+        delayed_cam0,
+        delayed_cam1,
         delayed_stamp_splits,
     ])

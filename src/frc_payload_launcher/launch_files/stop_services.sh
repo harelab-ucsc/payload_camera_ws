@@ -1,16 +1,19 @@
 #!/bin/bash
-# Stop all *.service units in the current directory
+# Stop FRC payload ROS2 launch and systemd services.
+# Used by run_tests.sh for integration test teardown and general cleanup.
 
-# Loop over any .service files; if none exist, the loop won’t run
-for service_file in *.service; do
-    # Skip if no matching files (glob expands to literal pattern when no matches)
-    [ -e "$service_file" ] || continue
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-    echo "Stopping $service_file..."
-    sudo systemctl stop "$service_file"
-done
+# Kill any running ros2 launch process (fast_launch.py or test_launch.py)
+pkill -TERM -f "ros2 launch frc_payload_launcher" 2>/dev/null || true
+sleep 1
+pkill -KILL -f "ros2 launch frc_payload_launcher" 2>/dev/null || true
 
-# Optional: inform if no services were found
-if ! compgen -G "*.service" > /dev/null; then
-    echo "No .service files found in the current directory."
+# Stop systemd services if systemd is active
+if pidof systemd > /dev/null 2>&1; then
+    for service_file in "$SCRIPT_DIR"/*.service; do
+        [ -e "$service_file" ] || continue
+        echo "Stopping $(basename "$service_file")..."
+        sudo systemctl stop "$(basename "$service_file")"
+    done
 fi

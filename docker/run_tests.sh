@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # docker/run_tests.sh
 #
-# Discovers and runs all tests inside docker/tests/.
+# Discovers and runs all tests inside docker/tests/ and src/*/test/.
 # Intended to be called from within the Docker container.
 #
 # Usage (inside container):
@@ -12,12 +12,17 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TESTS_DIR="$SCRIPT_DIR/tests"
+LAUNCH_FILES="$WS_ROOT/src/frc_payload_launcher/launch_files"
 
 # Source ROS2 and workspace environments
 . /opt/ros/iron/setup.sh
 if [ -f /payload_camera_ws/install/setup.sh ]; then
     . /payload_camera_ws/install/setup.sh
 fi
+
+# Ensure no leftover services from a previous run
+echo "[run_tests.sh] Stopping any running services (clean state)"
+bash "$LAUNCH_FILES/stop_services.sh"
 
 echo "[run_tests.sh] Discovering tests"
 
@@ -40,16 +45,45 @@ if [ "${#test_files[@]}" -eq 0 ]; then
     exit 0
 fi
 
-echo "[run_tests.sh] Found ${#test_files[@]} test file(s) across docker/tests/ and src/*/test/:"
+# Separate integration tests (need services running) from unit tests (services stopped)
+mapfile -t integration_files < <(printf '%s\n' "${test_files[@]}" | grep "test_integration" || true)
+mapfile -t unit_files        < <(printf '%s\n' "${test_files[@]}" | grep -v "test_integration" || true)
+
+echo "[run_tests.sh] Found ${#test_files[@]} test file(s) (${#unit_files[@]} unit, ${#integration_files[@]} integration):"
 printf '  %s\n' "${test_files[@]}"
 echo ""
 
-python3 -m pytest --import-mode=importlib "${test_files[@]}" -v -s
+# ── Unit tests (services stopped) ─────────────────────────────────────────────
+if [ "${#unit_files[@]}" -gt 0 ]; then
+    echo "[run_tests.sh] Running unit tests (services stopped)"
+    python3 -m pytest --import-mode=importlib "${unit_files[@]}" -v -s
+    echo ""
+fi
+
+# ── Integration tests (services started via start_services.sh + fast_launch.py)
+if [ "${#integration_files[@]}" -gt 0 ]; then
+    echo "[run_tests.sh] Starting services for integration tests (mock launch)"
+    LAUNCH_FILE=test_launch.py bash "$LAUNCH_FILES/start_services.sh" &
+    LAUNCH_PID=$!
+
+    # Wait for fake publishers + stamp_split to initialise and DDS to settle.
+    # Extra time needed: 5120×800 frames take longer to route through DDS than small ones.
+    sleep 15
+
+    INTEGRATION_RC=0
+    python3 -m pytest --import-mode=importlib "${integration_files[@]}" -v -s || INTEGRATION_RC=$?
+
+    echo "[run_tests.sh] Stopping services after integration tests"
+    bash "$LAUNCH_FILES/stop_services.sh"
+    wait "$LAUNCH_PID" 2>/dev/null || true
+    echo ""
+
+    [ $INTEGRATION_RC -ne 0 ] && exit $INTEGRATION_RC
+fi
 
 # ── Per-package lint tests ─────────────────────────────────────────────────────
 # Run ament lint tests (flake8, pep257, copyright) from within each package
 # directory so they only check files belonging to that package.
-echo ""
 echo "[run_tests.sh] Running per-package lint tests"
 
 mapfile -t lint_files < <(find \

@@ -89,10 +89,10 @@ class PpsTimePub(Node):
                 last_warn = float("-inf")  # reset so next gap triggers immediately
 
                 t = Time()
-                self.get_logger().info(f'{edge["assert_time"]}')
+#                self.get_logger().info(f'{edge["assert_time"]}')
                 t.sec = int(edge["assert_time"])
                 t.nanosec = int((edge["assert_time"] - int(edge["assert_time"])) * 1e9)
-                self.get_logger().info(f"t.sec: {t.sec},     t.nanosec: {t.nanosec}")
+#                self.get_logger().info(f"t.sec: {t.sec},     t.nanosec: {t.nanosec}")
                 self.pub.publish(t)
 
                 pub_count += 1

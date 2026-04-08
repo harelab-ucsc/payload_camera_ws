@@ -1,0 +1,11 @@
+[Unit]
+Description=Configure camera trigger mode via v4l2
+Requires=dev-v4l-subdev2.device dev-v4l-subdev5.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/configure_cameras.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

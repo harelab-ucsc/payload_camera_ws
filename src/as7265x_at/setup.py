@@ -20,7 +20,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            # The existing hardware driver node
             'as7265x_at_node = as7265x_at.as7265x_at_node:main',
+            
+            # THE NEW LINE: The MicaSense processing/bridge node
+            'micasense_bridge = as7265x_at.micasense_spectrometer_bridge:main',
         ],
     },
 )

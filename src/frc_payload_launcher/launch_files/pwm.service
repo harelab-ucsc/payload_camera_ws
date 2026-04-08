@@ -1,0 +1,17 @@
+[Unit]
+Description=PWM Interface for Camera Trigger
+After=network.target
+
+[Service]
+Type=simple
+User=pi5-alpha
+ExecStart=/usr/bin/python3 /home/pi5-alpha/ros2/ros2_iron/src/birdseye/scripts/rpi_pwm_interface.py
+Restart=on-failure
+RestartSec=2
+
+# Optional but useful:
+WorkingDirectory=/home/pi5-alpha
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

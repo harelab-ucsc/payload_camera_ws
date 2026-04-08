@@ -51,15 +51,15 @@ _PPS_TOOLS_PATH = "pps_time_pub.pps_time_pub.pps_tools"
 # Helpers
 # ---------------------------------------------------------------------------
 
-class _Tu:
-    def __init__(self, sec: int, nsec: int):
-        self.sec = sec
-        self.nsec = nsec
-
-
 class FakeEdge:
+    """Mimics the dict-like edge object returned by pps_tools 3.22 PpsFile.fetch()."""
     def __init__(self, sec: int, nsec: int):
-        self.assert_tu = _Tu(sec, nsec)
+        self._assert_time = sec + nsec / 1e9
+
+    def __getitem__(self, key):
+        if key == "assert_time":
+            return self._assert_time
+        raise KeyError(key)
 
 
 class _SpyLogger:
@@ -80,7 +80,7 @@ class _SpyLogger:
         return sum(1 for lvl, msg in self.records if lvl == 'warn' and substr in msg)
 
 
-def _make_node(watchdog_interval_s: float = 10.0, start_pwm: bool = False):
+def _make_node(watchdog_interval_s: float = 10.0):
     """Manually init a PpsTimePub without starting the background thread."""
     node = PpsTimePub.__new__(PpsTimePub)
     rclpy.node.Node.__init__(node, "pps_time_pub_test")
@@ -88,17 +88,12 @@ def _make_node(watchdog_interval_s: float = 10.0, start_pwm: bool = False):
 
     node.declare_parameter("pps_device", "/dev/pps0")
     node.declare_parameter("pps_topic", "/pps/time")
-    node.declare_parameter("start_pwm", start_pwm)
-    node.declare_parameter("pwm_script", "/dev/null")
-    node.declare_parameter("pwm_python", "python3")
-    node.declare_parameter("pwm_start_delay_s", 0.0)
     node.declare_parameter("watchdog_interval_s", watchdog_interval_s)
 
     node.pps_device = node.get_parameter("pps_device").value
     node.pps_topic = node.get_parameter("pps_topic").value
     node.watchdog_interval = watchdog_interval_s
     node.stop_evt = threading.Event()
-    node.pwm_proc = None
 
     return node
 
@@ -177,18 +172,19 @@ class TestPublishPath:
             f"Expected {len(edges)} messages, got {len(messages)}"
         )
         for i, (msg, edge) in enumerate(zip(messages, edges)):
-            assert msg.sec == edge.assert_tu.sec, \
-                f"msg[{i}].sec {msg.sec} != {edge.assert_tu.sec}"
-            assert msg.nanosec == edge.assert_tu.nsec, \
-                f"msg[{i}].nanosec {msg.nanosec} != {edge.assert_tu.nsec}"
+            assert_time = edge["assert_time"]
+            expected_sec = int(assert_time)
+            expected_nanosec = int((assert_time - expected_sec) * 1e9)
+            assert msg.sec == expected_sec, \
+                f"msg[{i}].sec {msg.sec} != {expected_sec}"
+            assert msg.nanosec == expected_nanosec, \
+                f"msg[{i}].nanosec {msg.nanosec} != {expected_nanosec}"
 
-    def test_set_params_called_with_captureassert(self):
-        """Node must call set_params with PPS_CAPTUREASSERT after opening the device."""
+    def test_ppsfile_opened_with_configured_device(self):
+        """PpsFile must be instantiated with the node's pps_device parameter."""
         with patch(_PPS_TOOLS_PATH) as mock_pps:
             mock_pps.data.PPS_CAPTUREASSERT = 0x01
-            ppsf = mock_pps.PpsFile.return_value
-            ppsf.get_params.return_value = {"mode": 0}
-            ppsf.fetch.side_effect = lambda timeout=None: None
+            mock_pps.PpsFile.return_value.fetch.side_effect = lambda timeout=None: None
 
             node = _make_node()
             _start(node)
@@ -197,11 +193,7 @@ class TestPublishPath:
             node.th.join(timeout=2.0)
             node.destroy_node()
 
-        ppsf.set_params.assert_called_once()
-        assert ppsf.set_params.call_args[1].get("mode") == 0x01, (
-            f"set_params mode was {ppsf.set_params.call_args[1].get('mode')!r}, "
-            "expected PPS_CAPTUREASSERT (0x01)"
-        )
+        mock_pps.PpsFile.assert_called_once_with(node.pps_device)
 
 
 class TestErrorHandling:
@@ -224,22 +216,25 @@ class TestErrorHandling:
             f"Expected error log. Got: {spy.records}"
         )
 
-    def test_get_params_failure_exits_cleanly(self):
-        """If get_params() raises, the thread must exit cleanly."""
+    def test_no_publish_when_fetch_returns_none(self, collector):
+        """When fetch always returns None no messages should be published."""
         with patch(_PPS_TOOLS_PATH) as mock_pps:
             mock_pps.data.PPS_CAPTUREASSERT = 0x01
-            mock_pps.PpsFile.return_value.get_params.side_effect = RuntimeError("params failed")
+            mock_pps.PpsFile.return_value.fetch.side_effect = lambda timeout=None: None
 
             node = _make_node()
-            spy = _SpyLogger()
-            node.get_logger = lambda: spy
             _start(node)
-            node.th.join(timeout=3.0)
+
+            collector_node, messages = collector
+            time.sleep(0.3)
+            _spin_for(collector_node, 0.5)
+
+            node.stop_evt.set()
+            node.th.join(timeout=2.0)
             node.destroy_node()
 
-        assert not node.th.is_alive(), "Thread should have exited after params failure"
-        assert spy.any_contains("Failed to configure") or spy.any_contains("params failed"), (
-            f"Expected error log. Got: {spy.records}"
+        assert len(messages) == 0, (
+            f"Expected 0 messages when fetch returns None, got {len(messages)}"
         )
 
     def test_fetch_exception_does_not_crash_node(self):

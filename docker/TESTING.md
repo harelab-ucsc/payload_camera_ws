@@ -1,6 +1,6 @@
-# Docker Integration Testing
+# Docker Testing
 
-Builds the workspace in a ROS2 Iron container and runs the pipeline test as a separate step.
+Builds the workspace in a ROS2 Iron container and runs all tests as a separate step.
 
 ## Build
 
@@ -8,45 +8,96 @@ Builds the workspace in a ROS2 Iron container and runs the pipeline test as a se
 docker build -f docker/Dockerfile -t payload_camera_ws:iron .
 ```
 
-Tests are **not** run during the build by default.
+The build step installs the systemd service files from `frc_payload_launcher/launch_files/`
+to `/etc/systemd/system/` via `install_services.sh`. When no systemd daemon is running
+(e.g. inside Docker), the file copy still happens but `daemon-reload`/`enable` are skipped.
 
-To run tests as part of the build (e.g. for a quick local check):
+Tests are **not** run during the build by default. To include them:
 
 ```bash
 docker build -f docker/Dockerfile --build-arg RUN_TESTS=true -t payload_camera_ws:iron .
 ```
 
-## Run the test
+## Run tests
 
 ```bash
-# Against the already-built image
-docker run --rm payload_camera_ws:iron bash -c \
-  ". /opt/ros/iron/setup.sh && \
-   . /payload_camera_ws/install/setup.sh && \
-   python3 -m pytest /payload_camera_ws/docker/test_integration.py -v"
+docker run --rm payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
+```
 
-# Or inside a running container / with the workspace sourced locally
-source install/setup.bash
-python3 -m pytest docker/test_integration.py -v
+## Test structure
+
+`run_tests.sh` runs three groups in order:
+
+### 1. Unit tests (services stopped)
+
+All `test_*.py` / `*_test.py` files found under `docker/tests/` and `src/*/test/`,
+excluding ament lint files. Services are stopped first to ensure a clean state.
+
+Currently includes:
+- `src/pps_time_pub/test/test_pps_time_pub.py` — unit tests for the PPS publisher node
+
+### 2. Integration test (services started via `start_services.sh`)
+
+`docker/tests/test_integration.py` exercises the full pipeline using mock hardware:
+
+```
+ros2 launch frc_payload_launcher test_launch.py
+  fake_image_pub (cam0, 5120×800, gradient + PPS, 3 fps)
+  fake_image_pub (cam1, 5120×800, gradient, no PPS, 3 fps)
+  fast_stamp_split × 2
+    → /cam0/R8_MONO_img{0..3}   (1280×800 slices)
+    → /cam1/BGGR_img{0..3}      (1280×800 slices)
+```
+
+**Note on frame rate:** `test_launch.py` runs at 3 fps instead of the production 10 fps.
+At 10 Hz, a 5120×800 rgb8 frame is ~12 MB (~120 MB/s per camera), which saturates DDS
+loopback UDP in Docker causing near-total message loss. 3 Hz reduces this to ~37 MB/s per
+camera while keeping the full production resolution. On real hardware `fast_launch.py`
+always uses 10 fps.
+
+Services are managed by the scripts in `src/frc_payload_launcher/launch_files/`:
+- `start_services.sh` — starts systemd services (if systemd is active) then launches
+  `ros2 launch frc_payload_launcher $LAUNCH_FILE` (`fast_launch.py` by default;
+  `test_launch.py` when `LAUNCH_FILE=test_launch.py` is set by `run_tests.sh`)
+- `stop_services.sh` — kills the ROS2 launch process and stops systemd services
+
+The test asserts:
+- All 8 slice topics receive ≥ 3 messages
+- Each slice is 1280×800 (5120/4)
+- PPS timestamp applied (stamp > 0)
+- Adjacent slices within each camera contain different pixel data
+
+### 3. Per-package lint tests
+
+`ament_flake8`, `ament_pep257`, and `ament_copyright` are run from inside each package
+directory so they only scan that package's source files.
+
+## On real hardware (Raspberry Pi)
+
+```bash
+# Build without skipping camera_ros (requires libcamera >= 0.1)
+colcon build --symlink-install
+
+# Install service files
+bash src/frc_payload_launcher/launch_files/install_services.sh
+
+# Start the full pipeline (5120×800, real cameras)
+bash src/frc_payload_launcher/launch_files/start_services.sh
+
+# Or for hardware integration testing
+LAUNCH_FILE=fast_launch.py bash src/frc_payload_launcher/launch_files/start_services.sh
 ```
 
 ## CI
 
-The GitHub Actions workflow (`.github/workflows/test.yml`) runs two steps on every push and pull request:
+`.github/workflows/test.yml` runs on every push and pull request:
 
-1. **Build** — builds the Docker image
-2. **Run integration tests** — runs pytest in the built container as a separate step
-
-## What the test does
-
-Launches `fake_image_pub.py` (synthetic 5120×800 images + PPS timestamps) and `pps_stamp_and_split` as subprocesses, then verifies the output:
-
-- All 4 slice topics (`img0`–`img3`) receive messages
-- Each slice is 1280×800 with correct encoding and step
-- PPS timestamp was applied (non-zero stamp)
-- Adjacent slices contain different pixel data (split actually happened)
+1. **Build** — `docker build -f docker/Dockerfile -t payload_camera_ws:iron .`
+2. **Run tests** — `docker run --rm payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh`
 
 ## Notes
 
-- `camera_ros` and `camera_ros_bringup` are skipped during build — they need `libcamera >= 0.1` which is only available on Raspberry Pi OS. Build without `--packages-skip` on the actual Pi.
-- The test uses the `gradient` pattern which produces distinct colours per camera zone, letting the pixel-content check verify the split is real.
+- `camera_ros` and `camera_ros_bringup` are skipped in Docker — they need
+  `libcamera >= 0.1` which is only available on Raspberry Pi OS.
+- The `gradient` pattern produces distinct hues per 128-px zone so the pixel-content
+  check can verify that slicing actually happened.

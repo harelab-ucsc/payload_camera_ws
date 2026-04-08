@@ -21,8 +21,13 @@ docker build -f docker/Dockerfile --build-arg RUN_TESTS=true -t payload_camera_w
 ## Run tests
 
 ```bash
-docker run --rm payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
+docker run --rm --shm-size 512m payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
 ```
+
+`--shm-size 512m` is required because the integration test uses FastDDS shared-memory
+transport to route ~12 MB frames between same-container processes without UDP fragmentation.
+FastDDS allocates one 16 MB SHM segment per DataWriter; with ~11 DataWriters the peak
+usage is ~176 MB — 512 MB gives comfortable headroom.
 
 ## Test structure
 

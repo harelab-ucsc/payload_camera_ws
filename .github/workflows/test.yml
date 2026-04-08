@@ -17,4 +17,4 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --rm payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
+          docker run --rm --shm-size 512m payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh

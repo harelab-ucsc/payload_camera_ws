@@ -3,7 +3,7 @@
 # Used by run_tests.sh for integration tests and by the systemd service unit.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-WS_ROOT="${WS_ROOT:-/payload_camera_ws}"
+WS_ROOT="${WS_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
 # Start systemd services if systemd is active
 if pidof systemd > /dev/null 2>&1; then

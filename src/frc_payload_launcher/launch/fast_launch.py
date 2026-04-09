@@ -33,11 +33,11 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {"camera":   0},
-            {"role":     "viewfinder"},
+            {"role":     "still"},
             {"width":    5120},
             {"height":   800},
             {"frame_id": "cam0_optical_frame"},
-            {"format":   "R8"},
+            {"format":   "R16"},
             # FrameDurationLimits is a [min, max] span in microseconds; 100000 µs = 10 fps
             {"FrameDurationLimits": [100000, 100000]},
         ],
@@ -74,11 +74,11 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {"camera":   1},
-            {"role":     "viewfinder"},
+            {"role":     "still"},
             {"width":    5120},
             {"height":   800},
             {"frame_id": "cam1_optical_frame"},
-            {"format":   "SBGGR8"},
+            {"format":   "SBGGR16"},
             {"FrameDurationLimits": [100000, 100000]},
         ],
     )

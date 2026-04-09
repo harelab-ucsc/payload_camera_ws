@@ -14,8 +14,16 @@ if pidof systemd > /dev/null 2>&1; then
     done
 fi
 
-# Source ROS2 and workspace environments
-. /opt/ros/iron/setup.sh
+# Source ROS2 environment — apt install (Docker) or source build (hardware)
+if [ -f /opt/ros/iron/setup.sh ]; then
+    . /opt/ros/iron/setup.sh
+elif [ -f "$HOME/ros2/ros2_iron/install/setup.sh" ]; then
+    . "$HOME/ros2/ros2_iron/install/setup.sh"
+else
+    echo "ERROR: could not find ROS2 Iron setup.sh" >&2
+    exit 1
+fi
+
 if [ -f "$WS_ROOT/install/setup.sh" ]; then
     . "$WS_ROOT/install/setup.sh"
 fi

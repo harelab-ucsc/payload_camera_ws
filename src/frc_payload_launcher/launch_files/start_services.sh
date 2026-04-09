@@ -28,6 +28,13 @@ if [ -f "$WS_ROOT/install/setup.sh" ]; then
     . "$WS_ROOT/install/setup.sh"
 fi
 
+# Load FastDDS SHM profile — installed by install_services.sh.
+# Systemd propagates /etc/environment.d/ automatically for services;
+# source it here so manual runs also get the SHM transport.
+if [ -f /etc/environment.d/fastdds-shm.conf ]; then
+    set -a; . /etc/environment.d/fastdds-shm.conf; set +a
+fi
+
 # Launch ROS2 nodes (replaces shell process so signals propagate cleanly).
 # Override LAUNCH_FILE to use a different launch file (e.g. test_launch.py for CI).
 LAUNCH_FILE="${LAUNCH_FILE:-fast_launch.py}"

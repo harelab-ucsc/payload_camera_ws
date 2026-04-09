@@ -38,6 +38,8 @@ def generate_launch_description():
             {"height":   800},
             {"frame_id": "cam0_optical_frame"},
             {"format":   "R8"},
+            # FrameDurationLimits is a [min, max] span in microseconds; 100000 µs = 10 fps
+            {"FrameDurationLimits": [100000, 100000]},
         ],
     )
 
@@ -77,6 +79,7 @@ def generate_launch_description():
             {"height":   800},
             {"frame_id": "cam1_optical_frame"},
             {"format":   "SBGGR8"},
+            {"FrameDurationLimits": [100000, 100000]},
         ],
     )
 

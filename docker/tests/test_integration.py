@@ -27,8 +27,8 @@ FULL_H  = 800
 SLICE_W = FULL_W // 4   # 1280
 
 # ── timing ─────────────────────────────────────────────────────────────────────
-# test_launch.py runs at 3 Hz (vs 10 Hz production) to keep DDS loopback
-# bandwidth tractable in Docker (~37 MB/s per camera instead of ~120 MB/s).
+# test_launch.py runs at 3 Hz, matching the hardware PWM trigger rate.
+# 5120×800 mono16/bayer16 @ 3 Hz = ~24 MB/s per camera — within Docker loopback capacity.
 DISCOVERY_SECS = 5.0    # wait for DDS discovery after services start
 COLLECT_SECS   = 30.0   # collection window (3 Hz × 30 s >> MIN_MSGS)
 MIN_MSGS       = 3      # minimum messages per slice topic to pass

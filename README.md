@@ -1,4 +1,4 @@
-# Slugaculture Camera Payload - ROS2 Interface
+# Slugriculture Camera Payload - ROS2 Interface
 
 ROS2 interface that integrates multispectral and orthomosaic, RGB camera systems.
 
@@ -22,7 +22,7 @@ CI (GitHub Actions) builds the image and calls the same script on every push and
 
 ### Authors
 
-Team Slugaculture
+Team Slugriculture
 HARE Lab
 jLab
 

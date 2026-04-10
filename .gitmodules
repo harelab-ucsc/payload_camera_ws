@@ -7,3 +7,6 @@
 [submodule "src/ros2_radalt"]
 	path = src/ros2_radalt
 	url = git@github.com:harelab-ucsc/ros2_radalt.git
+[submodule "src/camera_ros"]
+	path = src/camera_ros
+	url = git@github.com:harelab-ucsc/camera_ros.git

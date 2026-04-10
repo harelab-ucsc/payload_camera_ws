@@ -21,8 +21,13 @@ docker build -f docker/Dockerfile --build-arg RUN_TESTS=true -t payload_camera_w
 ## Run tests
 
 ```bash
-docker run --rm payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
+docker run --rm --shm-size 512m payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
 ```
+
+`--shm-size 512m` is required because the integration test uses FastDDS shared-memory
+transport to route ~12 MB frames between same-container processes without UDP fragmentation.
+FastDDS allocates one 16 MB SHM segment per DataWriter; with ~11 DataWriters the peak
+usage is ~176 MB — 512 MB gives comfortable headroom.
 
 ## Test structure
 
@@ -49,11 +54,9 @@ ros2 launch frc_payload_launcher test_launch.py
     → /cam1/BGGR_img{0..3}      (1280×800 slices)
 ```
 
-**Note on frame rate:** `test_launch.py` runs at 3 fps instead of the production 10 fps.
-At 10 Hz, a 5120×800 rgb8 frame is ~12 MB (~120 MB/s per camera), which saturates DDS
-loopback UDP in Docker causing near-total message loss. 3 Hz reduces this to ~37 MB/s per
-camera while keeping the full production resolution. On real hardware `fast_launch.py`
-always uses 10 fps.
+**Note on frame rate:** `test_launch.py` runs at 3 fps, matching the hardware PWM trigger
+rate. 5120×800 mono16/bayer16 @ 3 Hz = ~24 MB/s per camera — within Docker loopback
+capacity with SHM transport.
 
 Services are managed by the scripts in `src/frc_payload_launcher/launch_files/`:
 - `start_services.sh` — starts systemd services (if systemd is active) then launches

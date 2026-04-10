@@ -1,0 +1,15 @@
+[Unit]
+Description=Configure FastDDS shared-memory transport profile
+DefaultDependencies=no
+Before=sysinit.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'mkdir -p /etc/environment.d && \
+    printf "FASTRTPS_DEFAULT_PROFILES_FILE=/etc/ros/fastdds_shm.xml\n" \
+    > /etc/environment.d/fastdds-shm.conf'
+
+[Install]
+WantedBy=sysinit.target

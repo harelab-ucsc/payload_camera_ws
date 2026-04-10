@@ -4,3 +4,6 @@
 [submodule "src/as7265x_at"]
 	path = src/as7265x_at
 	url = git@github.com:harelab-ucsc/as7265x_at.git
+[submodule "src/ros2_radalt"]
+	path = src/ros2_radalt
+	url = git@github.com:harelab-ucsc/ros2_radalt.git

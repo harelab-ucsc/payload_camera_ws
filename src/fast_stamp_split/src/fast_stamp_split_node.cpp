@@ -66,7 +66,14 @@ public:
     slice_w_ = full_width_ / num_slices_;
 
     // QoS
-    rclcpp::SensorDataQoS img_qos;
+    // Subscription to raw images: BEST_EFFORT to match camera_ros publisher
+    rclcpp::SensorDataQoS img_sub_qos;
+    // Slice publishers: RELIABLE so rosbag2 always captures all 4 slices from
+    // each frame together.  Backpressure is negligible at 3 Hz.
+    rclcpp::QoS slice_pub_qos(10);
+    slice_pub_qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+    slice_pub_qos.history(RMW_QOS_POLICY_HISTORY_KEEP_LAST);
+
     rclcpp::QoS pps_qos(static_cast<size_t>(pps_depth));
     pps_qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
     pps_qos.history(RMW_QOS_POLICY_HISTORY_KEEP_LAST);
@@ -77,14 +84,14 @@ public:
       std::bind(&PpsStampAndSplitCpp::ppsCallback, this, _1));
 
     img_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      in_topic, img_qos,
+      in_topic, img_sub_qos,
       std::bind(&PpsStampAndSplitCpp::imageCallback, this, _1));
 
     // Publishers
-    pub0_ = this->create_publisher<sensor_msgs::msg::Image>(out_0_topic, img_qos);
-    pub1_ = this->create_publisher<sensor_msgs::msg::Image>(out_1_topic, img_qos);
-    pub2_ = this->create_publisher<sensor_msgs::msg::Image>(out_2_topic, img_qos);
-    pub3_ = this->create_publisher<sensor_msgs::msg::Image>(out_3_topic, img_qos);
+    pub0_ = this->create_publisher<sensor_msgs::msg::Image>(out_0_topic, slice_pub_qos);
+    pub1_ = this->create_publisher<sensor_msgs::msg::Image>(out_1_topic, slice_pub_qos);
+    pub2_ = this->create_publisher<sensor_msgs::msg::Image>(out_2_topic, slice_pub_qos);
+    pub3_ = this->create_publisher<sensor_msgs::msg::Image>(out_3_topic, slice_pub_qos);
 
     RCLCPP_INFO(
       this->get_logger(),

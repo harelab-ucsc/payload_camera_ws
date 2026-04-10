@@ -10,9 +10,6 @@
 [submodule "src/camera_ros"]
 	path = src/camera_ros
 	url = git@github.com:harelab-ucsc/camera_ros.git
-[submodule "src/andrea_multispec"]
-	path = src/andrea_multispec
-	url = git@github.com:harelab-ucsc/andrea_multispec.git
 [submodule "src/fast_stamp_split"]
 	path = src/fast_stamp_split
 	url = git@github.com:harelab-ucsc/fast_stamp_split.git

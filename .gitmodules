@@ -16,3 +16,6 @@
 [submodule "src/fast_stamp_split"]
 	path = src/fast_stamp_split
 	url = git@github.com:harelab-ucsc/fast_stamp_split.git
+[submodule "src/pps_time_pub"]
+	path = src/pps_time_pub
+	url = git@github.com:harelab-ucsc/pps_time_pub.git

@@ -39,7 +39,7 @@ RUN rosdep update && \
         --from-paths src \
         --ignore-src \
         --rosdistro iron \
-        --skip-keys "libcamera OpenCV camera_info_manager image_transport image_view python3-deprecated ament_cmake_pyflakes ament_cmake_mypy ament_cmake_pep257 ament_cmake_flake8 ament_cmake_lint_cmake ament_cmake_cppcheck ament_cmake_clang_format ament_cmake_xmllint clang-format" \
+        --skip-keys "libcamera OpenCV camera_info_manager image_transport image_view python3-deprecated ament_cmake_pyflakes ament_cmake_mypy ament_cmake_pep257 ament_cmake_flake8 ament_cmake_lint_cmake ament_cmake_cppcheck ament_cmake_clang_format ament_cmake_xmllint clang-format ainsteintools" \
         -y
 
 # ─── Build the workspace ──────────────────────────────────────────────────────

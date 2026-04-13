@@ -101,6 +101,7 @@ class SyncNode(Node):
 
         self.get_logger().info("Sync Node Initialized. Waiting for PPS Trigger...")
 
+
     def dirCheck(self):
         if not os.path.isdir(self.dir_name):
             self.get_logger().info(f"{self.dir_name} does not exist in home dir... Generating.")
@@ -143,6 +144,68 @@ class SyncNode(Node):
         self.get_logger().info('...Done reading clicks CSV file.\n')
 
 
+    def calibUptake(self):
+        self.get_logger().info(f'Reading sensor parameters YAML file: {self.sensors_yaml}...')
+        devices = [f'{self.sensor}', 'ins', 'radalt']
+        res = None
+        intr1 = None
+        intr2 = None
+        extr = None
+        with open(self.sensors_yaml, 'r') as f:
+            params = yaml.safe_load(f)
+            for device in devices:
+                data = params[device]
+                if device == self.sensor:
+                    self.res = data["resolution"]
+                    self.K = data["intrinsics"]
+                    self.dist = data["distortion_coeffs"]
+                    self.extr = data["T_cam_imu"]  # extrinsics relative to imu base link
+                    self.extr = utilities.matrix_list_converter(self.extr, (4,4))
+                    res = self.res
+                    intr1 = self.K
+                    intr2 = self.dist
+                    extr = self.extr
+                    self.putParameters(device, res, intr1, intr2, extr)
+                elif device == 'ins':
+                    intr1 = [data["accelerometer_noise_density"], data["accelerometer_random_walk"]]
+                    intr2 = [data["gyroscope_noise_density"],  data["gyroscope_random_walk"]]
+                    self.putParameters(device, res, intr1, intr2, extr)
+                elif device == 'radalt':
+                    extr = data["T_rad_imu"]
+                    self.putParameters(device, res, intr1, intr2, utilities.matrix_list_converter(extr, (4,4)))
+                res = None
+                intr1 = None
+                intr2 = None
+                extr = None
+        self.get_logger().info('...Done reading sensor parameters YAML file.\n')
+
+
+    def putParameters(self, device_key, resolution, intrinsics1, intrinsics2, extrinsics):
+        vals = '"'
+        cols = "sensorID, resolution, intrinsics1, intrinsics2, extrinsics"
+        valsList = [device_key, resolution, intrinsics1, intrinsics2, extrinsics]
+        vals += '","'.join([str(x) for x in valsList])
+        vals += '"'
+        self.dbc.insertIgnoreInto(f"parameters_{self.db_name}", cols, vals)
+
+
+    def getParameters(self, device_key):
+        params = []
+        cols = "sensorID, resolution, intrinsics1, intrinsics2, extrinsics"
+        table = f"parameters_{self.db_name}"
+        ret = self.dbc.getFrom(cols, table, cond=f'WHERE sensorID = "{device_key}"')
+        for elem in ret:
+            for i, item in enumerate(elem):
+                if item == device_key:
+                    params.append(item)
+                elif item != 'None':
+                    tmp = utilities.string_list_converter(item)
+                    if item == elem[-1]:
+                        tmp = utilities.matrix_list_converter(tmp, (4,4))
+                    params.append(tmp)
+        return params
+
+
     # --- 1. PPS Trigger (State Machine Start) ---
     def pps_cb(self, msg: BuiltinTime):
         with self.state_lock:
@@ -157,12 +220,15 @@ class SyncNode(Node):
                 self.caught_data[key] = None
             # self.get_logger().info(f"State Cleared. New Sync Cycle: {msg.sec}.{msg.nanosec}")
 
+
     # --- 2. Data "Catch" Callbacks ---
     def cam0_cb(self, msg):
         self.catch('cam0', msg)
 
+
     def cam1_cb(self, msg):
         self.catch('cam1', msg)
+
 
     def ins_cb(self, msg):
         # Using logic from your provided subscriberNode
@@ -170,12 +236,15 @@ class SyncNode(Node):
         if msg.hdw_status & self.HDW_STROBE == self.HDW_STROBE:
             self.catch('pose', msg)
 
+
     def radalt_cb(self, msg):
         if msg.snr > 13:
             self.catch('radalt', msg.altitude)
 
+
     def spec_cb(self, msg):
         self.catch('spec', msg.values)
+
 
     def catch(self, key, data):
         with self.state_lock:
@@ -189,8 +258,10 @@ class SyncNode(Node):
                 # Logic: Stamp -> Split/Process -> Save
                 self.process_sync_cycle()
 
+
     def all_caught(self):
         return all(v is not None for v in self.caught_data.values())
+
 
     # --- 3. Processing & Radiometric Correction ---
     def process_sync_cycle(self):
@@ -206,45 +277,45 @@ class SyncNode(Node):
         # Start a thread for saving (Multithreaded as per specs)
         threading.Thread(target=self.post_process_and_save, args=(data, stamp)).start()
 
+
     def post_process_and_save(self, data, stamp):
         """
         Implements MicaSense-style correction using AS7265x data
         before saving to disk and SQL.
         """
         try:
-            # 1. Split & Reflectance Post-Processing
+            # Reflectance Post-Processing
             # Indices: Red=13 (680nm), NIR=16 (810nm)
             spec_vals = data['spec']
             cam0_raw = self.br.imgmsg_to_cv2(data['cam0'], desired_encoding='passthrough')
-            pose = data['pose']
-            u = utm.from_latlon(pose.lla[0], pose.lla[1])  # returns easting, northing, zone number, zone letter
-            utm_NUM = u[2]
-            utm_LET = u[3]
 
             # Apply Spectrometer Correction (Simplifed Reflectance Bridge)
             # Reflectance = Raw / Irradiance
             red_irr = spec_vals[13]
             corrected_img = (cam0_raw.astype(np.float32) / red_irr) if red_irr > 0 else cam0_raw
 
-            # 2. Save Image to File
+            # 2. Convert pose lat-lon -> UTM
+            pose = data['pose']
+            u = utm.from_latlon(pose.lla[0], pose.lla[1])  # returns easting, northing, zone number, zone letter
+            utm_NUM = u[2]
+            utm_LET = u[3]
+
+            # 3. Save Image to File
             time_str = f"{stamp.sec}.{stamp.nanosec}"
             if self.img_format == '.png':
-                cv2.imwrite(data_loc, image)
+                cv2.imwrite(filename, (np.clip(corrected_img, 0, 1)*255).astype(np.uint8))
             elif self.img_format == '.jpg':
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 # Convert OpenCV BGR (or RGB) NumPy image to PIL RGB
                 pil_img = Img.fromarray(image)  # For grayscale or already-RGB
 
-                # Compute GPS metadata
-                lat, lon = utm.to_latlon(pos[0], pos[1], utm_NUM, utm_LET)
-
                 gps_ifd = {
-                    piexif.GPSIFD.GPSLatitudeRef: 'N' if lat >= 0 else 'S',
+                    piexif.GPSIFD.GPSLatitudeRef: 'N' if pose.lla[0] >= 0 else 'S',
                     piexif.GPSIFD.GPSLatitude: deg_to_dms_rational(abs(lat)),
-                    piexif.GPSIFD.GPSLongitudeRef: 'E' if lon >= 0 else 'W',
-                    piexif.GPSIFD.GPSLongitude: deg_to_dms_rational(abs(lon)),
+                    piexif.GPSIFD.GPSLongitudeRef: 'E' if pose.lla[1] >= 0 else 'W',
+                    piexif.GPSIFD.GPSLongitude: deg_to_dms_rational(abs(pose.lla[1])),
                     piexif.GPSIFD.GPSAltitudeRef: 0,
-                    piexif.GPSIFD.GPSAltitude: (int(pos[2] * 100), 100),
+                    piexif.GPSIFD.GPSAltitude: (int(pose.lla[2] * 100), 100),
                 }
 
                 exif_dict = {"GPS": gps_ifd}
@@ -252,10 +323,9 @@ class SyncNode(Node):
 
                 # Save directly with EXIF
                 pil_img.save(data_loc, exif=exif_bytes, format='JPEG', quality=95)
-            filename = os.path.join(os.path.expanduser('~'), f"parsed_flight/corrected_{time_str}.png")
             cv2.imwrite(filename, (np.clip(corrected_img, 0, 1)*255).astype(np.uint8))
 
-            # 3. Save Data Frame to SQL
+            # 4. Save Data Frame to SQL
             # Format: x, y, z, q, u, a, t, status, radalt, path, time...
             vals = [
                 # UTM -> save x:easting, y:northing, z:WGS84 altitude
@@ -276,6 +346,7 @@ class SyncNode(Node):
 
         except Exception as e:
             self.get_logger().error(f"Post-processing failed: {e}")
+
 
 def main(args=None):
     rclpy.init(args=args)

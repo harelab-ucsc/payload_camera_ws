@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 File: sync_node.py
-Description: 
+Description:
     ROS 2 Sync Node based on State Machine Specs.
-    Flow: Wait for PPS -> Clear State -> Catch All (Cam, Pose, Spec, Radalt) 
+    Flow: Wait for PPS -> Clear State -> Catch All (Cam, Pose, Spec, Radalt)
     -> Stamp/Correct -> Save (Multithreaded).
 """
 
@@ -51,7 +51,8 @@ class SyncNode(Node):
         self.br = CvBridge()
 
         # --- Parameters and Setup ---
-        self.declare_parameter('db_name', 'flight_sync_data')
+        self.declare_parameter("db_name", 'flight_data')
+        self.db_name = self.get_parameter("db_name").value
         self.declare_parameter('output_dir', 'parsed_flight')
         self.declare_parameter('img_format', '.png')
         self.img_format = self.get_parameter('img_format').value
@@ -346,7 +347,6 @@ class SyncNode(Node):
             # --- Convert ---
             cam0_raw = self.br.imgmsg_to_cv2(data['cam0'], desired_encoding='passthrough').copy()
             cam1_raw = self.br.imgmsg_to_cv2(data['cam1'], desired_encoding='passthrough').copy()
-            cam1_raw = cv2.cvtColor(cam1_raw, cv2.COLOR_BAYER_BG2RGB)
 
             # --- Split ---
             cam0_list = self.split_camarray(cam0_raw)
@@ -378,6 +378,7 @@ class SyncNode(Node):
                 self.image_save(img, filename, pose)
 
             for i, img in enumerate(cam1_list):
+                img = cv2.cvtColor(img, cv2.COLOR_BAYER_BG2RGB)
                 filename = os.path.join(
                     self.dir_name,
                     f"cam1_{i}_{time_str}.{self.img_format}"
@@ -406,7 +407,7 @@ class SyncNode(Node):
                 "x, y, z, q, u, a, t, rtk_status, ins_status, radalt, save_loc, pps_time",
                 val_str
             )
-            self.get_logger().info(f"Cycle Complete: Saved {filename}")
+            self.get_logger().info(f"Cycle Complete: Saved {len(paths)} at timestep {time_str}")
 
         except Exception as e:
             self.get_logger().error(f"Post-processing failed: {e}")

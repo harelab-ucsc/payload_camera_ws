@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'as7265x_at_node = as7265x_at.as7265x_at_node:main',
+            'sync_node = as7265x_at.sync_node:main'
         ],
     },
 )

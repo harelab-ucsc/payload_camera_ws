@@ -23,6 +23,28 @@ import numpy as np
 from cv_bridge import CvBridge
 from .dbConnector import dbConnector # Assuming it's in the same package
 
+import time
+import stat
+import csv
+import yaml
+import utm
+import glob2
+import piexif
+from PIL import Image as Img
+import concurrent.futures
+import copy
+
+
+def deg_to_dms_rational(deg_float):
+    """Convert decimal degrees to EXIF-friendly rational DMS."""
+    deg = int(deg_float)
+    min_float = (deg_float - deg) * 60
+    minute = int(min_float)
+    sec_float = (min_float - minute) * 60
+    sec = int(sec_float * 1000000)
+    return [(deg, 1), (minute, 1), (sec, 1000000)]
+
+
 class SyncNode(Node):
     def __init__(self):
         super().__init__('sync_node')
@@ -80,8 +102,6 @@ class SyncNode(Node):
             'pose': None,
             'spec': None,
             'radalt': None,
-            'RTK_STATUS': None,
-            'INS_STATUS': None
         }
 
         # --- Subscriptions ---
@@ -100,6 +120,9 @@ class SyncNode(Node):
         self.create_subscription(AS7265xCal, 'as7265x/calibrated_values', self.spec_cb, 10)
 
         self.get_logger().info("Sync Node Initialized. Waiting for PPS Trigger...")
+
+        # --- Multithreading setup ---
+        self.save_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 
     def dirCheck(self):
@@ -209,7 +232,7 @@ class SyncNode(Node):
     # --- 1. PPS Trigger (State Machine Start) ---
     def pps_cb(self, msg: BuiltinTime):
         with self.state_lock:
-            # Check for "Big Error" logic from diagram: 
+            # Check for "Big Error" logic from diagram:
             # If we get a NEW PPS but haven't "Caught All" from the last one
             if any(v is not None for v in self.caught_data.values()) and not self.all_caught():
                 self.get_logger().error("BIG ERROR: New PPS received before previous cycle completed!")
@@ -218,7 +241,7 @@ class SyncNode(Node):
             self.current_pps_stamp = msg
             for key in self.caught_data:
                 self.caught_data[key] = None
-            # self.get_logger().info(f"State Cleared. New Sync Cycle: {msg.sec}.{msg.nanosec}")
+            self.get_logger().info(f"State Cleared. New Sync Cycle: {msg.sec}.{msg.nanosec}")
 
 
     # --- 2. Data "Catch" Callbacks ---
@@ -231,9 +254,11 @@ class SyncNode(Node):
 
 
     def ins_cb(self, msg):
-        # Using logic from your provided subscriberNode
         # Check if Strobed
         if msg.hdw_status & self.HDW_STROBE == self.HDW_STROBE:
+            self.RTK_STATUS = ((msg.ins_status)&self.INS_STATUS_GPS_NAV_FIX_MASK)>>self.INS_STATUS_GPS_NAV_FIX_OFFSET
+            self.INS_STATUS = ((msg.ins_status)&self.INS_STATUS_SOLUTION_MASK)>>self.INS_STATUS_SOLUTION_OFFSET
+
             self.catch('pose', msg)
 
 
@@ -263,7 +288,36 @@ class SyncNode(Node):
         return all(v is not None for v in self.caught_data.values())
 
 
-    # --- 3. Processing & Radiometric Correction ---
+    # --- 3. Processing and Saving ---
+    def split_camarray(self, img, filename, num_cams=4):
+        h, w = img.shape[:2]
+        sub_w = w // num_cams
+        return [img[:, i*sub_w:(i+1)*sub_w] for i in range(num_cams)]
+
+
+    def image_save(self, img):
+        if self.img_format == '.png':
+            cv2.imwrite(filename, (np.clip(img, 0, 1)*255).astype(np.uint8))
+        elif self.img_format == '.jpg':
+            # Convert OpenCV BGR (or RGB) NumPy image to PIL RGB
+            pil_img = Img.fromarray(img)  # For grayscale or already-RGB
+
+            gps_ifd = {
+                piexif.GPSIFD.GPSLatitudeRef: 'N' if pose.lla[0] >= 0 else 'S',
+                piexif.GPSIFD.GPSLatitude: deg_to_dms_rational(abs(pose.lla[0])),
+                piexif.GPSIFD.GPSLongitudeRef: 'E' if pose.lla[1] >= 0 else 'W',
+                piexif.GPSIFD.GPSLongitude: deg_to_dms_rational(abs(pose.lla[1])),
+                piexif.GPSIFD.GPSAltitudeRef: 0,
+                piexif.GPSIFD.GPSAltitude: (int(pose.lla[2] * 100), 100),
+            }
+
+            exif_dict = {"GPS": gps_ifd}
+            exif_bytes = piexif.dump(exif_dict)
+
+            # Save directly with EXIF
+            pil_img.save(filename, exif=exif_bytes, format='JPEG', quality=95)
+
+
     def process_sync_cycle(self):
         # Capture a snapshot of data to free the lock quickly
         data = self.caught_data.copy()
@@ -274,8 +328,8 @@ class SyncNode(Node):
             self.caught_data[key] = None
         self.current_pps_stamp = None
 
-        # Start a thread for saving (Multithreaded as per specs)
-        threading.Thread(target=self.post_process_and_save, args=(data, stamp)).start()
+        # Push to save executor for saving
+        self.save_executor.submit(self.post_process_and_save, data, stamp)
 
 
     def post_process_and_save(self, data, stamp):
@@ -284,15 +338,26 @@ class SyncNode(Node):
         before saving to disk and SQL.
         """
         try:
-            # Reflectance Post-Processing
+            # 1. Reflectance Post-Processing
             # Indices: Red=13 (680nm), NIR=16 (810nm)
             spec_vals = data['spec']
-            cam0_raw = self.br.imgmsg_to_cv2(data['cam0'], desired_encoding='passthrough')
+            # --- Convert ---
+            cam0_raw = self.br.imgmsg_to_cv2(data['cam0'], desired_encoding='passthrough').copy()
+            cam1_raw = self.br.imgmsg_to_cv2(data['cam1'], desired_encoding='passthrough').copy()
+            cam1_raw = cv2.cvtColor(cam1_raw, cv2.COLOR_BAYER_BG2RGB)
 
-            # Apply Spectrometer Correction (Simplifed Reflectance Bridge)
-            # Reflectance = Raw / Irradiance
-            red_irr = spec_vals[13]
-            corrected_img = (cam0_raw.astype(np.float32) / red_irr) if red_irr > 0 else cam0_raw
+            # --- Split ---
+            cam0_list = self.split_camarray(cam0_raw)
+            cam1_list = self.split_camarray(cam1_raw)
+
+            # --- Correct cam0 (MONO imagery for multispec) only ---
+            corrected_cam0 = []
+            for img in cam0_list:
+                if spec_vals is not None and len(spec_vals) > 13:
+                    red_irr = spec_vals[13]
+                    if red_irr > 0:
+                        img = img.astype(np.float32) / red_irr
+                corrected_cam0.append(img)
 
             # 2. Convert pose lat-lon -> UTM
             pose = data['pose']
@@ -300,30 +365,22 @@ class SyncNode(Node):
             utm_NUM = u[2]
             utm_LET = u[3]
 
-            # 3. Save Image to File
-            time_str = f"{stamp.sec}.{stamp.nanosec}"
-            if self.img_format == '.png':
-                cv2.imwrite(filename, (np.clip(corrected_img, 0, 1)*255).astype(np.uint8))
-            elif self.img_format == '.jpg':
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                # Convert OpenCV BGR (or RGB) NumPy image to PIL RGB
-                pil_img = Img.fromarray(image)  # For grayscale or already-RGB
+            # 3. Save Images to File
+            time_str = f"{stamp.sec}.{str(stamp.nanosec).rjust(9,'0')}"
 
-                gps_ifd = {
-                    piexif.GPSIFD.GPSLatitudeRef: 'N' if pose.lla[0] >= 0 else 'S',
-                    piexif.GPSIFD.GPSLatitude: deg_to_dms_rational(abs(lat)),
-                    piexif.GPSIFD.GPSLongitudeRef: 'E' if pose.lla[1] >= 0 else 'W',
-                    piexif.GPSIFD.GPSLongitude: deg_to_dms_rational(abs(pose.lla[1])),
-                    piexif.GPSIFD.GPSAltitudeRef: 0,
-                    piexif.GPSIFD.GPSAltitude: (int(pose.lla[2] * 100), 100),
-                }
+            for i, img in enumerate(corrected_cam0):
+                filename = os.path.join(
+                    self.dir_name,
+                    f"cam0_{i}_{time_str}.{self.img_format}"
+                )
+                self.image_save(img, filename)
 
-                exif_dict = {"GPS": gps_ifd}
-                exif_bytes = piexif.dump(exif_dict)
-
-                # Save directly with EXIF
-                pil_img.save(data_loc, exif=exif_bytes, format='JPEG', quality=95)
-            cv2.imwrite(filename, (np.clip(corrected_img, 0, 1)*255).astype(np.uint8))
+            for i, img in enumerate(cam1_list):
+                filename = os.path.join(
+                    self.dir_name,
+                    f"cam1_{i}_{time_str}.{self.img_format}"
+                )
+                self.image_save(img, filename)
 
             # 4. Save Data Frame to SQL
             # Format: x, y, z, q, u, a, t, status, radalt, path, time...
@@ -332,7 +389,9 @@ class SyncNode(Node):
                 u[0], u[1], pose.lla[2],
                 # quat comes scalar-first in NED -> convert to scalar-last ENU for saving
                 pose.qn2b[2], pose.qn2b[1], -pose.qn2b[3], pose.qn2b[0],
-                int(pose.ins_status), float(data['radalt']), f"'{filename}'",
+                int(pose.ins_status),
+                float(data['radalt']),
+                filename,
                 time_str
             ]
 
@@ -346,6 +405,11 @@ class SyncNode(Node):
 
         except Exception as e:
             self.get_logger().error(f"Post-processing failed: {e}")
+
+
+    def destroy_node(self):
+        self.save_executor.shutdown(wait=True)
+        super().destroy_node()
 
 
 def main(args=None):

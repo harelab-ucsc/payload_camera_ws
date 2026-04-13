@@ -289,15 +289,15 @@ class SyncNode(Node):
 
 
     # --- 3. Processing and Saving ---
-    def split_camarray(self, img, filename, num_cams=4):
+    def split_camarray(self, img, num_cams=4):
         h, w = img.shape[:2]
         sub_w = w // num_cams
         return [img[:, i*sub_w:(i+1)*sub_w] for i in range(num_cams)]
 
 
-    def image_save(self, img):
+    def image_save(self, img, filename, pose):
         if self.img_format == '.png':
-            cv2.imwrite(filename, (np.clip(img, 0, 1)*255).astype(np.uint8))
+            cv2.imwrite(filename, img)
         elif self.img_format == '.jpg':
             # Convert OpenCV BGR (or RGB) NumPy image to PIL RGB
             pil_img = Img.fromarray(img)  # For grayscale or already-RGB
@@ -338,6 +338,8 @@ class SyncNode(Node):
         before saving to disk and SQL.
         """
         try:
+            pose = data['pose']
+
             # 1. Reflectance Post-Processing
             # Indices: Red=13 (680nm), NIR=16 (810nm)
             spec_vals = data['spec']
@@ -360,45 +362,48 @@ class SyncNode(Node):
                 corrected_cam0.append(img)
 
             # 2. Convert pose lat-lon -> UTM
-            pose = data['pose']
             u = utm.from_latlon(pose.lla[0], pose.lla[1])  # returns easting, northing, zone number, zone letter
             utm_NUM = u[2]
             utm_LET = u[3]
 
             # 3. Save Images to File
             time_str = f"{stamp.sec}.{str(stamp.nanosec).rjust(9,'0')}"
-
+            paths = []
             for i, img in enumerate(corrected_cam0):
                 filename = os.path.join(
                     self.dir_name,
                     f"cam0_{i}_{time_str}.{self.img_format}"
                 )
-                self.image_save(img, filename)
+                paths.append(filename)
+                self.image_save(img, filename, pose)
 
             for i, img in enumerate(cam1_list):
                 filename = os.path.join(
                     self.dir_name,
                     f"cam1_{i}_{time_str}.{self.img_format}"
                 )
-                self.image_save(img, filename)
+                paths.append(filename)
+                self.image_save(img, filename, pose)
 
             # 4. Save Data Frame to SQL
             # Format: x, y, z, q, u, a, t, status, radalt, path, time...
+            paths_str = "|".join(paths)
             vals = [
                 # UTM -> save x:easting, y:northing, z:WGS84 altitude
                 u[0], u[1], pose.lla[2],
                 # quat comes scalar-first in NED -> convert to scalar-last ENU for saving
                 pose.qn2b[2], pose.qn2b[1], -pose.qn2b[3], pose.qn2b[0],
-                int(pose.ins_status),
+                self.RTK_STATUS,
+                self.INS_STATUS,
                 float(data['radalt']),
-                filename,
+                paths_str,
                 time_str
             ]
 
             val_str = ','.join(map(str, vals))
             self.dbc.insertIgnoreInto(
                 f"{self.sensor_id}_images_{self.get_parameter('db_name').value}",
-                "x, y, z, q, u, a, t, ins_status, radalt, save_loc, pps_time",
+                "x, y, z, q, u, a, t, rtk_status, ins_status, radalt, save_loc, pps_time",
                 val_str
             )
             self.get_logger().info(f"Cycle Complete: Saved {filename}")

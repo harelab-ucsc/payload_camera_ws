@@ -178,7 +178,6 @@ class SyncNode(Node):
             u = utm.from_latlon(msg.lla[0], msg.lla[1])  # returns easting, northing, zone number, zone letter
             utm_NUM = u[2]
             utm_LET = u[3]
-              # save x:easting, y:northing, z:WGS84 altitude
 
             vals = [
                 # UTM -> save x:easting, y:northing, z:WGS84 altitude

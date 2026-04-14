@@ -1,0 +1,3 @@
+[submodule "src/stream_processor"]
+	path = src/stream_processor
+	url = git@github.com:harelab-ucsc/stream_processor.git

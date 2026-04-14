@@ -206,10 +206,12 @@ class FakeImagePublisher(Node):
 
     def _publish_image(self):
         frame = self._make_frame()
+        frame_num = self._frame_idx
         self._frame_idx += 1
 
+        recv_stamp = self.get_clock().now()
         msg = Image()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.stamp = recv_stamp.to_msg()
         msg.header.frame_id = self.frame_id
         msg.height = self.height
         msg.width = self.width
@@ -228,7 +230,11 @@ class FakeImagePublisher(Node):
             msg.step = self.width * 3
             msg.data = frame.tobytes()
 
+        pub_time = self.get_clock().now()
         self._img_pub.publish(msg)
+        self.get_logger().debug(
+            f"frame {frame_num}  recv {recv_stamp.nanoseconds} ns  pub {pub_time.nanoseconds} ns"
+        )
 
     def _publish_pps(self):
         msg = self.get_clock().now().to_msg()

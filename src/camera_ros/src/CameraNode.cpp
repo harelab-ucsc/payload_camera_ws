@@ -701,12 +701,18 @@ CameraNode::process(libcamera::Request *const request)
                                  stream->configuration().pixelFormat.toString());
       }
 
+      const rclcpp::Time publish_time = this->now();
       pub_image->publish(std::move(msg_img));
       pub_image_compressed->publish(std::move(msg_img_compressed));
 
       sensor_msgs::msg::CameraInfo ci = cim.getCameraInfo();
       ci.header = hdr;
       pub_ci->publish(ci);
+
+      RCLCPP_DEBUG_STREAM(get_logger(),
+        "frame " << metadata.sequence
+        << "  recv " << rclcpp::Time(hdr.stamp).nanoseconds() << " ns"
+        << "  pub "  << publish_time.nanoseconds() << " ns");
     }
     else if (request->status() == libcamera::Request::RequestCancelled) {
       RCLCPP_ERROR_STREAM(get_logger(), "request '" << request->toString() << "' cancelled");

@@ -95,8 +95,6 @@ class SyncNode(Node):
         # --- State Machine Variables ---
         self.state_lock = threading.Lock()
         self.current_pps_stamp = None
-        self.utm_NUM = None
-        self.utm_LET = None
         self.caught_data = {
             'cam0': None,
             'cam1': None,

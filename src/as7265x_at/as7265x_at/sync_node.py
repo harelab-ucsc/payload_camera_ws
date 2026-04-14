@@ -9,19 +9,17 @@ Description:
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Float32MultiArray
 from builtin_interfaces.msg import Time as BuiltinTime
 from inertial_sense_ros2.msg import DIDINS2
-from custom_msgs.msg import AltSNR
-from as7265x_at_msgs.msg import AS7265xCal
 
 import cv2
 import os
 import threading
 import numpy as np
 from cv_bridge import CvBridge
-from .dbConnector import dbConnector # Assuming it's in the same package
 
 import time
 import stat
@@ -33,6 +31,19 @@ import piexif
 from PIL import Image as Img
 import concurrent.futures
 import copy
+
+# Custom code imports
+from . import dbConnector
+from . import utilities
+from custom_msgs.msg import AltSNR
+from as7265x_at_msgs.msg import AS7265xCal
+
+
+# Create a custom QoSProfile to prevent message drops
+qos_profile = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,  # Reliable delivery
+    history=HistoryPolicy.KEEP_LAST          # Keep all messages
+)
 
 
 def deg_to_dms_rational(deg_float):
@@ -53,17 +64,16 @@ class SyncNode(Node):
         # --- Parameters and Setup ---
         self.declare_parameter("db_name", 'flight_data')
         self.db_name = self.get_parameter("db_name").value
-        self.declare_parameter('output_dir', 'parsed_flight')
         self.declare_parameter('img_format', '.png')
         self.img_format = self.get_parameter('img_format').value
-        self.sensor_id = "multispectral_sync"
+        self.sensor_id = "frc_payload"
 
         self.declare_parameter("dir_name", 'parsed_flight')
         self.dir_name = self.get_parameter("dir_name").value
         self.dir_name = os.path.join(os.path.expanduser('~'), self.dir_name)
         self.dirCheck()
 
-        db_path = os.path.join(os.path.expanduser('~'), self.get_parameter('output_dir').value)
+        db_path = os.path.join(os.path.expanduser('~'), self.get_parameter('dir_name').value)
         os.makedirs(db_path, exist_ok=True)
         self.dbc = dbConnector(os.path.join(db_path, self.get_parameter('db_name').value))
         self.dbc.boot(self.get_parameter('db_name').value, self.sensor_id)
@@ -105,18 +115,18 @@ class SyncNode(Node):
 
         # --- Subscriptions ---
         # 1. PPS Trigger (The heartbeat of the state machine)
-        self.create_subscription(BuiltinTime, '/pps/time', self.pps_cb, 10)
+        self.create_subscription(BuiltinTime, '/pps/time', self.pps_cb, qos_profile=qos_profile)
 
         # 2. Camera Streams
-        self.create_subscription(Image, '/cam0/image_raw', self.cam0_cb, 10)
-        self.create_subscription(Image, '/cam1/image_raw', self.cam1_cb, 10)
+        self.create_subscription(Image, '/cam0/camera_node/image_raw', self.cam0_cb, qos_profile=qos_profile)
+        self.create_subscription(Image, '/cam1/camera_node/image_raw', self.cam1_cb, qos_profile=qos_profile)
 
         # 3. Navigation & Environment
-        self.create_subscription(DIDINS2, '/ins', self.ins_cb, 10)
-        self.create_subscription(AltSNR, '/rad_altitude', self.radalt_cb, 10)
+        self.create_subscription(DIDINS2, '/ins_quat_uvw_lla', self.ins_cb, qos_profile=qos_profile)
+        self.create_subscription(AltSNR, '/rad_altitude', self.radalt_cb, qos_profile=qos_profile)
 
         # 4. AS7265x Spectrometer (For Reflectance)
-        self.create_subscription(AS7265xCal, 'as7265x/calibrated_values', self.spec_cb, 10)
+        self.create_subscription(AS7265xCal, 'as7265x/calibrated_values', qos_profile=qos_profile, self.spec_cb)
 
         self.get_logger().info("Sync Node Initialized. Waiting for PPS Trigger...")
 
@@ -168,7 +178,7 @@ class SyncNode(Node):
 
     def calibUptake(self):
         self.get_logger().info(f'Reading sensor parameters YAML file: {self.sensors_yaml}...')
-        devices = [f'{self.sensor}', 'ins', 'radalt']
+        devices = [self.sensor_id, 'ins', 'radalt']
         res = None
         intr1 = None
         intr2 = None
@@ -177,7 +187,7 @@ class SyncNode(Node):
             params = yaml.safe_load(f)
             for device in devices:
                 data = params[device]
-                if device == self.sensor:
+                if device == self.sensor_id:
                     self.res = data["resolution"]
                     self.K = data["intrinsics"]
                     self.dist = data["distortion_coeffs"]
@@ -319,7 +329,7 @@ class SyncNode(Node):
 
     def process_sync_cycle(self):
         # Capture a snapshot of data to free the lock quickly
-        data = self.caught_data.copy()
+        data = copy.deepcopy(self.caught_data)
         stamp = self.current_pps_stamp
 
         # Reset state for next cycle immediately

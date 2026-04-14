@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  FastDDS transport profile for Docker CI.
+
+  Problem: a 5120×800 rgb8 frame is ~12.3 MB. FastDDS fragments it into ~190
+  UDP datagrams over Docker's loopback interface. With BEST_EFFORT QoS (no
+  retransmission), any dropped packet silently discards the whole frame.
+
+  Fix: configure shared-memory (SHM) transport as the primary transport.
+  SHM delivers the whole buffer in a single memcpy — no UDP fragmentation,
+  no packet loss for same-container communication.
+
+  Ref: https://fast-dds.docs.eprosima.com/en/2.10.x/fastdds/transport/shared_memory/shared_memory.html
+
+  Activated via:
+    FASTRTPS_DEFAULT_PROFILES_FILE=/payload_camera_ws/docker/fastdds_shm.xml
+  Set in the Dockerfile ENV so all child processes inherit it automatically.
+
+  Runtime requirement: enough /dev/shm space.
+    docker run --shm-size 512m ...
+  With 11 DataWriters × 16 MB segment = ~176 MB peak; 512 MB is comfortable.
+-->
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+
+    <transport_descriptors>
+
+        <!--
+          Shared-memory transport.
+          segment_size must exceed the largest single message (~12.3 MB per
+          5120×800 rgb8 frame). 16 MB gives a small buffer above that.
+          FastDDS allocates one segment of this size per DataWriter.
+        -->
+        <transport_descriptor>
+            <transport_id>shm_transport</transport_id>
+            <type>SHM</type>
+            <segment_size>16777216</segment_size>
+            <port_queue_capacity>512</port_queue_capacity>
+            <healthy_check_timeout_ms>1000</healthy_check_timeout_ms>
+        </transport_descriptor>
+
+        <!--
+          UDPv4 transport — kept for DDS participant discovery (multicast PDP).
+          Data traffic for same-container peers will prefer SHM above.
+          Enlarged socket buffers reduce kernel drops for any residual UDP traffic.
+        -->
+        <transport_descriptor>
+            <transport_id>udp_transport</transport_id>
+            <type>UDPv4</type>
+            <sendBufferSize>8388608</sendBufferSize>
+            <receiveBufferSize>8388608</receiveBufferSize>
+        </transport_descriptor>
+
+    </transport_descriptors>
+
+    <!--
+      Apply to all unnamed participants (is_default_profile="true").
+      SHM is listed first so FastDDS prefers it for same-host peers;
+      UDP stays available for discovery and off-host fallback.
+      useBuiltinTransports=false disables the default built-in UDP transport
+      so we control both transports explicitly.
+    -->
+    <participant profile_name="default_participant" is_default_profile="true">
+        <rtps>
+            <useBuiltinTransports>false</useBuiltinTransports>
+            <userTransports>
+                <transport_id>shm_transport</transport_id>
+                <transport_id>udp_transport</transport_id>
+            </userTransports>
+        </rtps>
+    </participant>
+
+</profiles>

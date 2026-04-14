@@ -16,9 +16,9 @@ _ws_root = str(Path(_prefix).parent) if _prefix else "/payload_camera_ws"
 FAKE_PUB = str(Path(_ws_root) / "fake_image_pub.py")
 
 
-# Production resolution used at reduced frame rate for Docker CI testing.
-# 5120×800 rgb8 @ 10 Hz = ~120 MB/s per camera — too much for DDS loopback.
-# 5120×800 rgb8 @ 3 Hz  =  ~37 MB/s per camera — within Docker loopback capacity.
+# Production resolution and frame rate used for Docker CI testing.
+# Hardware runs at 3 Hz (PWM-triggered); test_launch.py matches that rate.
+# 5120×800 rgb8 @ 3 Hz = ~37 MB/s per camera — within Docker loopback capacity.
 TEST_WIDTH = 5120
 TEST_HEIGHT = 800
 NUM_SLICES = 4

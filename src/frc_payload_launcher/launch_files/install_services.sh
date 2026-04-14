@@ -20,6 +20,21 @@ mkdir -p "$DEST_DIR"
 # Copy all .service files
 sudo cp "$SERVICE_DIR"/*.service "$DEST_DIR"/
 
+# Install the FastDDS SHM profile to a fixed system path so fastdds-shm.service
+# can reference it at /etc/ros/fastdds_shm.xml regardless of workspace location.
+FASTDDS_XML="$SCRIPT_DIR/../../../docker/fastdds_shm.xml"
+FASTDDS_XML="$(cd "$(dirname "$FASTDDS_XML")" && pwd)/$(basename "$FASTDDS_XML")"
+if [ -f "$FASTDDS_XML" ]; then
+    sudo mkdir -p /etc/ros /etc/environment.d
+    sudo cp "$FASTDDS_XML" /etc/ros/fastdds_shm.xml
+    echo "FASTRTPS_DEFAULT_PROFILES_FILE=/etc/ros/fastdds_shm.xml" \
+        | sudo tee /etc/environment.d/fastdds-shm.conf > /dev/null
+    echo "Installed FastDDS SHM profile to /etc/ros/fastdds_shm.xml"
+    echo "Wrote /etc/environment.d/fastdds-shm.conf"
+else
+    echo "WARNING: $FASTDDS_XML not found — skipping FastDDS profile install"
+fi
+
 # Only reload/enable when systemd is actually running (not inside Docker build)
 if pidof systemd > /dev/null 2>&1; then
     echo "Reloading systemd daemon..."

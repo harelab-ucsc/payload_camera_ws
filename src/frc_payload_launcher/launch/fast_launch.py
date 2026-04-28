@@ -8,9 +8,10 @@ from launch.event_handlers import OnProcessStart
 
 def generate_launch_description():
     # Declare arguments
+    val = "/home/pi5-alpha/ros2/ros2_iron/src/inertial-sense-sdk/ros2/launch/example_params.yaml"
     yaml_param_file_arg = DeclareLaunchArgument(
         "yaml_param_file",
-        default_value="/home/pi5-alpha/ros2/ros2_iron/src/inertial-sense-sdk/ros2/launch/example_params.yaml",
+        default_value=val,
         description="Path to the YAML parameter file for the inertial_sense_ros2 node",
     )
 
@@ -18,18 +19,6 @@ def generate_launch_description():
         "antenna_offset_gps1",
         default_value="[-0.02, 0.48, -0.36]",  # Default value; update as needed
         description="Offset for GPS1 antenna",
-    )
-
-    gps2_enable_arg = DeclareLaunchArgument(
-        "gps2_enable",
-        default_value="True",
-        description="Boolean, whether or not to enable the second GPS antenna for compassing. Default: True",
-    )
-
-    antenna_offset_gps2_arg = DeclareLaunchArgument(
-        "antenna_offset_gps2",
-        default_value="[-0.02, -0.48, -0.36]",  # Default value; update as needed
-        description="Offset for GPS2 antenna",
     )
 
     mag_declination_arg = DeclareLaunchArgument(
@@ -41,8 +30,6 @@ def generate_launch_description():
     # Get the argument values
     yaml_param_file = LaunchConfiguration("yaml_param_file")
     antenna_offset_gps1 = LaunchConfiguration("antenna_offset_gps1")
-    antenna_offset_gps2 = LaunchConfiguration("antenna_offset_gps2")
-    gps2_enable = LaunchConfiguration("gps2_enable")
     mag_declination = LaunchConfiguration("mag_declination")
 
     # ------------------------------------------------------------------
@@ -85,8 +72,6 @@ def generate_launch_description():
         arguments=[yaml_param_file],
         parameters=[
             {"antenna_offset_gps1": antenna_offset_gps1},
-            {"antenna_offset_gps2": antenna_offset_gps2},
-            {"msg/gps2/enable": gps2_enable},
             {"mag_declination": mag_declination},
         ],
     )

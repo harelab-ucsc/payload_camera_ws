@@ -208,8 +208,6 @@ def generate_launch_description():
         [
             yaml_param_file_arg,
             antenna_offset_gps1_arg,
-            antenna_offset_gps2_arg,
-            gps2_enable_arg,
             mag_declination_arg,
             pps,
             radalt,

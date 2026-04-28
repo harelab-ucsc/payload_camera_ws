@@ -91,9 +91,7 @@ class AS7265xStreamNode(Node):
             self.get_logger().info("AS7265x configuration failure. Killing node.")
             self.destroy_node()
 
-    # ---------------------------------------------------------
     # Send AT command
-    # ---------------------------------------------------------
     def send(self, cmd: str):
         """Send an AT command to the spectrometer."""
         try:
@@ -101,9 +99,7 @@ class AS7265xStreamNode(Node):
         except Exception as e:
             self.get_logger().error(f"Write error: {e}")
 
-    # ---------------------------------------------------------
     # Background serial reader
-    # ---------------------------------------------------------
     def read_loop(self):
         """
         Read and process serial data from the device.
@@ -157,9 +153,7 @@ class AS7265xStreamNode(Node):
                 self.get_logger().error(f"Serial read error: {e}")
                 time.sleep(0.1)
 
-    # ---------------------------------------------------------
     # Parse incoming burst lines
-    # ---------------------------------------------------------
     def handle_line(self, line: str):
         # Debug publisher
         dbg = String()

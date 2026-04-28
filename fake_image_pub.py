@@ -223,6 +223,27 @@ class FakeImagePublisher(Node):
             gray = frame[:, :, 0]  # cheap single-channel
             msg.step = self.width
             msg.data = gray.tobytes()
+        elif self.encoding == "mono16":
+            # Production cam0 publishes R16 (mono16). Promote to uint16.
+            gray = frame[:, :, 0].astype(np.uint16) << 8
+            msg.step = self.width * 2
+            msg.data = gray.tobytes()
+        elif self.encoding == "bayer_bggr16":
+            # Production cam1 publishes SBGGR16. Build a synthetic Bayer mosaic
+            # from the RGB frame so that debayer roundtrips to a recognizable
+            # gradient. Pattern (BG/GR rows):
+            #   row 0,2,...:  B  G  B  G ...
+            #   row 1,3,...:  G  R  G  R ...
+            bayer = np.empty((self.height, self.width), dtype=np.uint16)
+            r16 = frame[:, :, 0].astype(np.uint16) << 8
+            g16 = frame[:, :, 1].astype(np.uint16) << 8
+            b16 = frame[:, :, 2].astype(np.uint16) << 8
+            bayer[0::2, 0::2] = b16[0::2, 0::2]
+            bayer[0::2, 1::2] = g16[0::2, 1::2]
+            bayer[1::2, 0::2] = g16[1::2, 0::2]
+            bayer[1::2, 1::2] = r16[1::2, 1::2]
+            msg.step = self.width * 2
+            msg.data = bayer.tobytes()
         else:
             # Fallback: raw bytes as-is
             msg.step = self.width * 3
@@ -248,7 +269,7 @@ def main():
     parser.add_argument("--width",    type=int,   default=5120)
     parser.add_argument("--height",   type=int,   default=800)
     parser.add_argument("--encoding", default="rgb8",
-                        choices=["rgb8", "bgr8", "mono8"])
+                        choices=["rgb8", "bgr8", "mono8", "mono16", "bayer_bggr16"])
     parser.add_argument("--pattern",  default="gradient",
                         choices=["solid", "gradient", "noise", "checker", "file"])
     parser.add_argument("--color",    default="128,128,128",

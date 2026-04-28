@@ -7,14 +7,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     # libcamera: backend driver required by camera_ros (Raspberry Pi Camera)
     libcamera-dev \
-    # OpenCV: required by fast_stamp_split (C++) and cv_bridge (vendored)
+    # OpenCV: required by stream_processor's spectral_correct C++ extension
+    # and cv_bridge (vendored)
     libopencv-dev \
     python3-opencv \
     # Boost Python: required by vendored cv_bridge
     libboost-dev \
     libboost-python-dev \
+    # pybind11: builds the stream_processor.spectral_correct extension.
+    # rosdep can also resolve this via pybind11_vendor; the apt package is a
+    # belt-and-suspenders fallback for iron snapshots where the vendor
+    # package isn't reliable.
+    python3-pybind11 \
+    pybind11-dev \
     # Python utilities
     python3-numpy \
+    python3-pandas \
     python3-pip \
     # Serial comms for AS7265x spectral sensor
     python3-serial \

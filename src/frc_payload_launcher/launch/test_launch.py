@@ -9,19 +9,25 @@ from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction
 from launch.event_handlers import OnProcessStart
 from launch_ros.actions import Node
 
-# Locate fake_image_pub.py at the workspace root.
+# Locate fake_image_pub.py / fake_sync_inputs.py at the workspace root.
 # COLCON_PREFIX_PATH is set to <ws>/install when the workspace is sourced.
 _prefix = os.environ.get("COLCON_PREFIX_PATH", "").split(":")[0]
 _ws_root = str(Path(_prefix).parent) if _prefix else "/payload_camera_ws"
 FAKE_PUB = str(Path(_ws_root) / "fake_image_pub.py")
+FAKE_SYNC_INPUTS = str(Path(_ws_root) / "fake_sync_inputs.py")
+
+# Test fixtures for sync_node startup (absolute paths bypass the ~/... join in SyncNode)
+_fixtures = str(Path(_ws_root) / "docker" / "tests" / "fixtures")
+TEST_SENSORS_YAML = str(Path(_fixtures) / "test_sensors.yaml")
+TEST_CLICKS_CSV = str(Path(_fixtures) / "test_clicks.csv")
+TEST_OUTPUT_DIR = "/tmp/test_sync_output"
 
 
 # Production resolution and frame rate used for Docker CI testing.
 # Hardware runs at 3 Hz (PWM-triggered); test_launch.py matches that rate.
-# 5120×800 rgb8 @ 3 Hz = ~37 MB/s per camera — within Docker loopback capacity.
+# 5120×800 mono16/bayer16 @ 3 Hz = ~24 MB/s per camera (one publisher hop only).
 TEST_WIDTH = 5120
 TEST_HEIGHT = 800
-NUM_SLICES = 4
 TEST_RATE = 3
 TEST_PPS_RATE = 2
 
@@ -29,7 +35,7 @@ TEST_PPS_RATE = 2
 def generate_launch_description():
 
     # ------------------------------------------------------------------
-    # Fake cam0 — gradient pattern, also publishes /pps/time
+    # Fake cam0 — mono16 to match production R16, also publishes /pps/time
     # ------------------------------------------------------------------
     fake_cam0 = ExecuteProcess(
         cmd=[
@@ -41,15 +47,14 @@ def generate_launch_description():
             "--pattern",  "gradient",
             "--width",    str(TEST_WIDTH),
             "--height",   str(TEST_HEIGHT),
-            "--encoding", "rgb8",
+            "--encoding", "mono16",
         ],
         output="screen",
         name="fake_cam0",
     )
 
     # ------------------------------------------------------------------
-    # Fake cam1 — gradient pattern (distinct zones → distinct slices),
-    #             shares /pps/time from fake_cam0
+    # Fake cam1 — bayer_bggr16 to match production SBGGR16
     # ------------------------------------------------------------------
     fake_cam1 = ExecuteProcess(
         cmd=[
@@ -60,66 +65,49 @@ def generate_launch_description():
             "--pattern",  "gradient",
             "--width",    str(TEST_WIDTH),
             "--height",   str(TEST_HEIGHT),
-            "--encoding", "rgb8",
+            "--encoding", "bayer_bggr16",
         ],
         output="screen",
         name="fake_cam1",
     )
 
     # ------------------------------------------------------------------
-    # cam0 stamp + split
+    # Fake INS / radalt / AS7265x — required for SyncNode.all_caught()
     # ------------------------------------------------------------------
-    stamp_split_cam0 = Node(
-        package="fast_stamp_split",
-        executable="fast_stamp_split_node",
-        name="pps_stamp_and_split",
-        namespace="cam0",
+    fake_sync_inputs = ExecuteProcess(
+        cmd=[sys.executable, FAKE_SYNC_INPUTS, "--rate", "10"],
         output="screen",
-        parameters=[{
-            "pps_topic":   "/pps/time",
-            "in_topic":    "/cam0/camera_node/image_raw",
-            "require_pps": True,
-            "full_width":  TEST_WIDTH,
-            "full_height": TEST_HEIGHT,
-            "num_slices":  NUM_SLICES,
-            "out_0":       "R8_MONO_img0",
-            "out_1":       "R8_MONO_img1",
-            "out_2":       "R8_MONO_img2",
-            "out_3":       "R8_MONO_img3",
-        }],
+        name="fake_sync_inputs",
     )
 
     # ------------------------------------------------------------------
-    # cam1 stamp + split
+    # sync_node — stream_processor PPS-synced save node
+    # Subscribes directly to raw camera topics and does split + spectral
+    # correction + debayer in-process via the C++ extension; no
+    # intermediate image topics on DDS.
     # ------------------------------------------------------------------
-    stamp_split_cam1 = Node(
-        package="fast_stamp_split",
-        executable="fast_stamp_split_node",
-        name="pps_stamp_and_split",
-        namespace="cam1",
+    sync_node = Node(
+        package="stream_processor",
+        executable="sync_node",
+        name="sync_node",
         output="screen",
         parameters=[{
-            "pps_topic":   "/pps/time",
-            "in_topic":    "/cam1/camera_node/image_raw",
-            "require_pps": True,
-            "full_width":  TEST_WIDTH,
-            "full_height": TEST_HEIGHT,
-            "num_slices":  NUM_SLICES,
-            "out_0":       "BGGR_img0",
-            "out_1":       "BGGR_img1",
-            "out_2":       "BGGR_img2",
-            "out_3":       "BGGR_img3",
+            "db_name":      "test_flight_data",
+            "img_format":   ".tiff",
+            "dir_name":     TEST_OUTPUT_DIR,
+            "sensors_yaml": TEST_SENSORS_YAML,
+            "clicks_csv":   TEST_CLICKS_CSV,
         }],
     )
 
-    # Give fake publishers 2 s to start before launching processing nodes
-    delayed_splits = RegisterEventHandler(
+    # sync_node starts 4 s after fake_cam0 to give DDS discovery time
+    delayed_sync = RegisterEventHandler(
         OnProcessStart(
             target_action=fake_cam0,
             on_start=[
                 TimerAction(
-                    period=2.0,
-                    actions=[stamp_split_cam0, stamp_split_cam1],
+                    period=4.0,
+                    actions=[sync_node],
                 )
             ],
         )
@@ -128,5 +116,6 @@ def generate_launch_description():
     return LaunchDescription([
         fake_cam0,
         fake_cam1,
-        delayed_splits,
+        fake_sync_inputs,
+        delayed_sync,
     ])

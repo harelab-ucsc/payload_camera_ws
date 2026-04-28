@@ -8,3 +8,6 @@ log/
 rosbag2_*/
 __pycache__/
 *.pyc
+
+## Claude Code session state
+.claude/

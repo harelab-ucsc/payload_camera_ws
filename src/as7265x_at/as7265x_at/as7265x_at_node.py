@@ -207,7 +207,7 @@ class AS7265xStreamNode(Node):
             return
 
     def destroy_node(self):
-        self.send(f"ATBURST=0")
+        self.send("ATBURST=0")
         self.stop_evt.set()
         try:
             self.ser.close()

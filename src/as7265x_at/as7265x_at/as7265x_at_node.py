@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-
+"""
+Spectrometer driver Node
+"""
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Header
@@ -102,7 +104,7 @@ class AS7265xStreamNode(Node):
         - handles partial reads
         - handles None returns from serial.read()
         - safely buffers until newline
-        - supports CR, LF, CRLF, \r\r\n
+        - supports CR, LF, CRLF, 
         - never crashes on invalid UTF-8
         """
         buf = bytearray()

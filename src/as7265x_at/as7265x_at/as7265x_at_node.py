@@ -211,7 +211,7 @@ class AS7265xStreamNode(Node):
         self.stop_evt.set()
         try:
             self.ser.close()
-        except Exception as e:
+        except Exception:
             pass
         super().destroy_node()
 

@@ -1,0 +1,12 @@
+frc_payload:
+  resolution: [5120, 800]
+  intrinsics: [1000.0, 0.0, 2560.0, 0.0, 1000.0, 400.0, 0.0, 0.0, 1.0]
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+  T_cam_imu: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+ins:
+  accelerometer_noise_density: 0.005
+  accelerometer_random_walk: 0.001
+  gyroscope_noise_density: 0.00035
+  gyroscope_random_walk: 0.0000381
+radalt:
+  T_rad_imu: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]

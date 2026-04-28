@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
+<<<<<<< HEAD
 """Spectrometer driver node."""
+=======
+"""
+AS7265x continuous streaming ROS 2 node.
+
+Option A: Hardware-driven burst mode (ATBURST=255).
+Publishes incoming spectral data automatically.
+"""
+>>>>>>> 16e6284 (changes for fast_stream_processor)
 
 import rclpy
 from rclpy.node import Node

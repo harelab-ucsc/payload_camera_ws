@@ -76,38 +76,6 @@ def generate_launch_description():
         ],
     )
 
-    #-------------------------------------------------------------------
-    # Radar altimeter, spectrometer, and INS nodes
-    #-------------------------------------------------------------------
-    radalt = Node(
-        package="ros2_radalt",
-        executable="radalt",
-        name="radalt",
-        output="screen"
-    )
-
-    spectrometer = Node(
-        package="as7265x_at",
-        executable="as7265x_at_node",
-        name="as7265x_at_node",
-        output="screen"
-    )
-
-    # Inertial Sense node with parameters
-    inertial_sense_node = Node(
-        package='inertial_sense_ros2',
-        executable='new_target',
-        name='inertial_sense_node',
-        output='screen',
-        arguments=[yaml_param_file],
-        parameters=[
-            {'antenna_offset_gps1': antenna_offset_gps1},
-            {'antenna_offset_gps2': antenna_offset_gps2},
-            {'msg/gps2/enable': gps2_enable},
-            {'mag_declination': mag_declination}
-        ]
-    )
-
     # ------------------------------------------------------------------
     # cam0 — mono sensor (arducam-pivariety 4-000c)
     # ------------------------------------------------------------------

@@ -1,3 +1,6 @@
+[submodule "src/stream_processor"]
+	path = src/stream_processor
+	url = git@github.com:harelab-ucsc/stream_processor.git
 [submodule "src/as7265x_at_msgs"]
 	path = src/as7265x_at_msgs
 	url = git@github.com:harelab-ucsc/as7265x_at_msgs.git

@@ -1,3 +1,12 @@
 # payload_camera_ws - requirements.txt
 
 rpi-hardware-pwm
+
+# stream_processor dependencies
+# numpy<2 required: python3-opencv (apt) was compiled against NumPy 1.x
+numpy<2
+utm
+glob2
+piexif
+Pillow
+scipy

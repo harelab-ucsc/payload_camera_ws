@@ -43,26 +43,6 @@ def generate_launch_description():
         ],
     )
 
-    stamp_split_cam0 = Node(
-        package="fast_stamp_split",
-        executable="fast_stamp_split_node",
-        name="pps_stamp_and_split",
-        namespace="cam0",
-        output="screen",
-        parameters=[{
-            "pps_topic":   "/pps/time",
-            "in_topic":    "/cam0/camera_node/image_raw",
-            "require_pps": True,
-            "full_width":  5120,
-            "full_height": 800,
-            "num_slices":  4,
-            "out_0":       "R8_MONO_img0",
-            "out_1":       "R8_MONO_img1",
-            "out_2":       "R8_MONO_img2",
-            "out_3":       "R8_MONO_img3",
-        }],
-    )
-
     # ------------------------------------------------------------------
     # cam1 — color Bayer sensor (arducam-pivariety 6-000c)
     # ------------------------------------------------------------------
@@ -83,23 +63,22 @@ def generate_launch_description():
         ],
     )
 
-    stamp_split_cam1 = Node(
-        package="fast_stamp_split",
-        executable="fast_stamp_split_node",
-        name="pps_stamp_and_split",
-        namespace="cam1",
+    # ------------------------------------------------------------------
+    # stream_processor — PPS-synced save node (does split + spectral
+    # correction + debayer in-process via the C++ extension; no
+    # intermediate image topics on DDS)
+    # ------------------------------------------------------------------
+    sync_node = Node(
+        package="stream_processor",
+        executable="sync_node",
+        name="sync_node",
         output="screen",
         parameters=[{
-            "pps_topic":   "/pps/time",
-            "in_topic":    "/cam1/camera_node/image_raw",
-            "require_pps": True,
-            "full_width":  5120,
-            "full_height": 800,
-            "num_slices":  4,
-            "out_0":       "BGGR_img0",
-            "out_1":       "BGGR_img1",
-            "out_2":       "BGGR_img2",
-            "out_3":       "BGGR_img3",
+            "db_name":      "flight_data",
+            "img_format":   ".tiff",
+            "dir_name":     "parsed_flight",
+            "sensors_yaml": "sensor_params/birdsEyeSensorParams.yaml",
+            "clicks_csv":   "catch/data.csv",
         }],
     )
 
@@ -108,7 +87,7 @@ def generate_launch_description():
     #   t=0.0s   pps starts
     #   t=2.0s   cam0 starts
     #   t=4.0s   cam1 starts (staggered to avoid I2C init collision)
-    #   t=6.0s   both stamp_split nodes start
+    #   t=6.0s   sync_node (stream_processor) starts
     # ------------------------------------------------------------------
     delayed_cam0 = RegisterEventHandler(
         OnProcessStart(
@@ -134,13 +113,13 @@ def generate_launch_description():
         )
     )
 
-    delayed_stamp_splits = RegisterEventHandler(
+    delayed_sync = RegisterEventHandler(
         OnProcessStart(
             target_action=pps,
             on_start=[
                 TimerAction(
                     period=6.0,
-                    actions=[stamp_split_cam0, stamp_split_cam1],
+                    actions=[sync_node],
                 )
             ],
         )
@@ -150,5 +129,5 @@ def generate_launch_description():
         pps,
         delayed_cam0,
         delayed_cam1,
-        delayed_stamp_splits,
+        delayed_sync,
     ])

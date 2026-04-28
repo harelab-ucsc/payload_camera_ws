@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Spectrometer driver Node
-"""
+""" Spectrometer driver node. """
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Header
@@ -19,6 +17,7 @@ READ_TIMEOUT = 0.1
 
 
 class AS7265xStreamNode(Node):
+    """ROS2 node for streaming AS7265x spectrometer data over serial."""
     def __init__(self):
         super().__init__('as7265x_stream')
 
@@ -90,6 +89,7 @@ class AS7265xStreamNode(Node):
     # Send AT command
     # ---------------------------------------------------------
     def send(self, cmd: str):
+        """Send an AT command to the spectrometer."""
         try:
             self.ser.write((cmd + "\r\n").encode('utf-8'))
         except Exception as e:
@@ -100,12 +100,10 @@ class AS7265xStreamNode(Node):
     # ---------------------------------------------------------
     def read_loop(self):
         """
-        Robust serial reader that:
-        - handles partial reads
-        - handles None returns from serial.read()
-        - safely buffers until newline
-        - supports CR, LF, CRLF, 
-        - never crashes on invalid UTF-8
+        Read and process serial data from the device.
+
+        Handles partial reads, buffering, newline parsing,
+        and UTF-8 decoding safely.
         """
         buf = bytearray()
 

@@ -10,3 +10,4 @@ glob2
 piexif
 Pillow
 scipy
+rasterio

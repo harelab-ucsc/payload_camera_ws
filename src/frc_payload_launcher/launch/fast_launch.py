@@ -90,7 +90,10 @@ def generate_launch_description():
             {"height":   800},
             {"frame_id": "cam0_optical_frame"},
             {"format":   "R16"},
-            # FrameDurationLimits is a [min, max] span in microseconds; 333333 µs = 3 fps
+            # FrameDurationLimits is a [min, max] span in microseconds; 333333 µs = 3 fps.
+            # The sensor's valid range is [28554..199977] so this is clamped to 5 fps
+            # internally, but the camera is externally triggered by PWM so the actual
+            # capture rate is set by rpi_pwm_interface.py (currently 3 Hz).
             {"FrameDurationLimits": [333333, 333333]},
         ],
     )
@@ -131,6 +134,7 @@ def generate_launch_description():
             "dir_name":     "parsed_flight",
             "sensors_yaml": "sensor_params/birdsEyeSensorParams.yaml",
             "clicks_csv":   "catch/data.csv",
+            "framerate":    3.0,
         }],
     )
 

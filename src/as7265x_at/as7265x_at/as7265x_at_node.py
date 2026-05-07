@@ -54,8 +54,12 @@ class AS7265xStreamNode(Node):
         # stop flag for clean exit
         self.stop_evt = threading.Event()
 
-        # Give device time to boot and flush any startup messages
-        time.sleep(0.5)
+        # Stop any in-progress burst streaming (e.g. from an unclean previous shutdown),
+        # flush the drain of buffered burst data, then configure fresh.
+        time.sleep(0.2)
+        self.ser.reset_input_buffer()
+        self.ser.write(b"ATBURST=0\r\n")
+        time.sleep(1.0)  # wait for device to stop streaming and flush output
         self.ser.reset_input_buffer()
 
         # Configure device

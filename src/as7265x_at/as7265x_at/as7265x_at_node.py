@@ -78,15 +78,36 @@ class AS7265xStreamNode(Node):
         return resp
 
     def configure_device(self):
-        self.ser.timeout = 2.0  # generous timeout for config commands
+        port = self.get_parameter('serial_port').value
+        baud = int(self.get_parameter('baudrate').value)
+        cmds = [
+            f"ATINTTIME={int(self.get_parameter('integration_time').value)}",
+            f"ATGAIN={int(self.get_parameter('gain').value)}",
+            f"ATINTRVL={int(self.get_parameter('interval').value)}",
+            f"ATBURST=255,{1 if self.get_parameter('calibrated').value else 0}",
+        ]
+        self.ser.timeout = 2.0
         try:
-            cmds = [
-                f"ATINTTIME={int(self.get_parameter('integration_time').value)}",
-                f"ATGAIN={int(self.get_parameter('gain').value)}",
-                f"ATINTRVL={int(self.get_parameter('interval').value)}",
-                f"ATBURST=255,{1 if self.get_parameter('calibrated').value else 0}",
-            ]
             resp = [self._cmd(c) for c in cmds]
+        except serial.SerialException as e:
+            # Device likely did a USB reset after ATBURST=0 stopped streaming.
+            # Close, wait for USB re-enumeration, reopen, and retry once.
+            self.get_logger().warn(f"Serial disconnect during config: {e}. Reopening port...")
+            try:
+                self.ser.close()
+            except Exception:
+                pass
+            time.sleep(3.0)
+            try:
+                self.ser = serial.Serial(port, baud, timeout=2.0)
+                time.sleep(0.5)
+                self.ser.reset_input_buffer()
+                resp = [self._cmd(c) for c in cmds]
+            except Exception as e2:
+                self.ser.timeout = READ_TIMEOUT
+                self.get_logger().info(f"AS7265x config failed after reconnect: {e2}. Killing node.")
+                self.destroy_node()
+                return
         finally:
             self.ser.timeout = READ_TIMEOUT
 

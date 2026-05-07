@@ -134,6 +134,7 @@ def generate_launch_description():
             "sensors_yaml": "sensor_params/birdsEyeSensorParams.yaml",
             "clicks_csv":   "catch/data.csv",
             "framerate":    3.0,
+            "gsd_m":        0.03,   # metres/pixel — update once optics are calibrated
         }],
     )
 

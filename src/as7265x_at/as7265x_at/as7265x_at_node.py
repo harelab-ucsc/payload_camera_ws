@@ -54,6 +54,10 @@ class AS7265xStreamNode(Node):
         # stop flag for clean exit
         self.stop_evt = threading.Event()
 
+        # Give device time to boot and flush any startup messages
+        time.sleep(0.5)
+        self.ser.reset_input_buffer()
+
         # Configure device
         self.configure_device()
 
@@ -61,29 +65,27 @@ class AS7265xStreamNode(Node):
         self.reader_thread = threading.Thread(target=self.read_loop, daemon=True)
         self.reader_thread.start()
 
+    def _cmd(self, cmd: str) -> str:
+        self.ser.reset_input_buffer()
+        self.send(cmd)
+        resp = self.ser.read(256).decode('utf-8', errors='replace')
+        if 'OK\n' not in resp:
+            self.get_logger().warn(f"No OK for '{cmd}': {repr(resp)}")
+        return resp
+
     def configure_device(self):
-        resp = []
-        # Integration time
-        it = int(self.get_parameter('integration_time').value)
-        self.send(f"ATINTTIME={it}")
-        resp.append(self.ser.read(256).decode('utf-8', errors='replace'))
+        self.ser.timeout = 2.0  # generous timeout for config commands
+        try:
+            cmds = [
+                f"ATINTTIME={int(self.get_parameter('integration_time').value)}",
+                f"ATGAIN={int(self.get_parameter('gain').value)}",
+                f"ATINTRVL={int(self.get_parameter('interval').value)}",
+                f"ATBURST=255,{1 if self.get_parameter('calibrated').value else 0}",
+            ]
+            resp = [self._cmd(c) for c in cmds]
+        finally:
+            self.ser.timeout = READ_TIMEOUT
 
-        # Gain
-        g = int(self.get_parameter('gain').value)
-        self.send(f"ATGAIN={g}")
-        resp.append(self.ser.read(256).decode('utf-8', errors='replace'))
-
-        # Sampling interval multiplier
-        iv = int(self.get_parameter('interval').value)
-        self.send(f"ATINTRVL={iv}")
-        resp.append(self.ser.read(256).decode('utf-8', errors='replace'))
-
-        # Enable continuous burst mode
-        mode = 1 if self.get_parameter('calibrated').value else 0
-        self.send(f"ATBURST=255,{mode}")
-        resp.append(self.ser.read(256).decode('utf-8', errors='replace'))
-
-        # self.get_logger().info(resp)
         if all('OK\n' in r for r in resp):
             self.get_logger().info("AS7265x is now streaming continuously (burst mode 255).")
         else:

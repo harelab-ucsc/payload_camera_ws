@@ -58,7 +58,7 @@ RUN rosdep update && \
 #
 # Remove the .colconignore that prevents stub_msgs from being built on the Pi
 # (stubs are needed here to substitute for missing hardware packages).
-RUN rm -f docker/.colconignore && \
+RUN rm -f docker/COLCON_IGNORE && \
     . /opt/ros/iron/setup.sh && \
     colcon build \
         --symlink-install \

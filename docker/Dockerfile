@@ -55,7 +55,11 @@ RUN rosdep update && \
 # Ubuntu 22.04 ships libcamera 0~git20200629 which is too old for x86 builds.
 # These packages are skipped here; on real Pi hardware colcon build runs without
 # --packages-skip and they will build against the Pi's native libcamera.
-RUN . /opt/ros/iron/setup.sh && \
+#
+# Remove the .colconignore that prevents stub_msgs from being built on the Pi
+# (stubs are needed here to substitute for missing hardware packages).
+RUN rm -f docker/.colconignore && \
+    . /opt/ros/iron/setup.sh && \
     colcon build \
         --symlink-install \
         --packages-skip camera_ros camera_ros_bringup \

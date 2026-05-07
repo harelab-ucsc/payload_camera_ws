@@ -90,11 +90,10 @@ def generate_launch_description():
             {"height":   800},
             {"frame_id": "cam0_optical_frame"},
             {"format":   "R16"},
-            # FrameDurationLimits is a [min, max] span in microseconds; 333333 µs = 3 fps.
-            # The sensor's valid range is [28554..199977] so this is clamped to 5 fps
-            # internally, but the camera is externally triggered by PWM so the actual
-            # capture rate is set by rpi_pwm_interface.py (currently 3 Hz).
-            {"FrameDurationLimits": [333333, 333333]},
+            # FrameDurationLimits is a [min, max] span in microseconds.
+            # Sensor max is 199977 µs (≈5 fps); actual capture rate is set by
+            # the external PWM trigger in rpi_pwm_interface.py (currently 3 Hz).
+            {"FrameDurationLimits": [199977, 199977]},
         ],
     )
 
@@ -114,7 +113,7 @@ def generate_launch_description():
             {"height":   800},
             {"frame_id": "cam1_optical_frame"},
             {"format":   "SBGGR16"},
-            {"FrameDurationLimits": [333333, 333333]},
+            {"FrameDurationLimits": [199977, 199977]},
         ],
     )
 

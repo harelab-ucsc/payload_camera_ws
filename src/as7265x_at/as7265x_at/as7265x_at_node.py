@@ -130,57 +130,16 @@ class AS7265xStreamNode(Node):
     # Background serial reader
     # ---------------------------------------------------------
     def read_loop(self):
-        r"""
-        Robust serial reader.
-
-        - handles partial reads
-        - handles None returns from serial.read()
-        - safely buffers until newline
-        - supports CR, LF, CRLF, \r\r\n
-        - never crashes on invalid UTF-8
-        """
-        buf = bytearray()
-
         while not self.stop_evt.is_set():
             try:
-                data = self.ser.read(256)
-
-                # pyserial CAN return None on USB glitches
-                if data is None:
-                    time.sleep(0.01)
+                # readline() blocks until \n or READ_TIMEOUT — no busy-spin
+                # on partial data unlike read(N) which returns immediately
+                raw = self.ser.readline()
+                if not raw:
                     continue
-
-                # If no data, loop again
-                if len(data) == 0:
-                    time.sleep(0.005)
-                    continue
-
-                # Append incoming bytes
-                buf.extend(data)
-
-                # Process complete lines
-                while True:
-                    nl = buf.find(b'\n')
-                    if nl == -1:
-                        break  # no complete line yet
-
-                    # Extract line (strip CR and whitespace)
-                    raw = buf[:nl].rstrip(b'\r')
-                    del buf[:nl+1]  # remove line including newline
-
-                    if not raw:
-                        continue
-
-                    # Decode safely
-                    try:
-                        line = raw.decode('utf-8', errors='replace').strip()
-                    except Exception as e:
-                        self.get_logger().warn(f"Decode error: {e}")
-                        continue
-
-                    if line:
-                        self.handle_line(line)
-
+                line = raw.rstrip(b'\r\n').decode('utf-8', errors='replace').strip()
+                if line:
+                    self.handle_line(line)
             except Exception as e:
                 self.get_logger().error(f"Serial read error: {e}")
                 time.sleep(0.1)

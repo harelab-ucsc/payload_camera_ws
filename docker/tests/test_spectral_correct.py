@@ -44,7 +44,9 @@ def test_cam0_per_band_division():
     for i, out in enumerate(outs):
         assert out.dtype == np.float32
         assert out.shape == (H, SLICE_W)
-        expected = np.full((H, SLICE_W), (i + 1) * 1000 / expected_divisors[i],
+        # Extension normalises uint16 to [0,1] (÷65535) then divides by irradiance.
+        expected = np.full((H, SLICE_W),
+                           (i + 1) * 1000 / 65535.0 / expected_divisors[i],
                            dtype=np.float32)
         np.testing.assert_allclose(out, expected, rtol=1e-5)
 
@@ -59,14 +61,14 @@ def test_cam0_owns_memory():
 
 
 def test_cam0_zero_irradiance_passthrough():
-    """spec_vals[i] == 0 for slice i -> identity (cast to float32)."""
+    """spec_vals[i] == 0 for slice i -> identity (normalised to float32 [0,1])."""
     img = make_gradient_u16()
     spec = np.zeros(18, dtype=np.float32)
     # Leave all 4 alignment indices at 0 -> all slices identity
     outs = process_cam0(img, spec)
     for i, out in enumerate(outs):
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32)
-        np.testing.assert_array_equal(out, expected)
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 65535.0
+        np.testing.assert_allclose(out, expected, rtol=1e-5)
 
 
 def test_cam0_nan_inf_passthrough():
@@ -79,9 +81,9 @@ def test_cam0_nan_inf_passthrough():
 
     outs = process_cam0(img, spec)
     for i in range(3):
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32)
-        np.testing.assert_array_equal(outs[i], expected)
-    expected3 = img[:, 3 * SLICE_W:].astype(np.float32) / 13.0
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 65535.0
+        np.testing.assert_allclose(outs[i], expected, rtol=1e-5)
+    expected3 = img[:, 3 * SLICE_W:].astype(np.float32) / 65535.0 / 13.0
     np.testing.assert_allclose(outs[3], expected3, rtol=1e-5)
 
 
@@ -89,8 +91,8 @@ def test_cam0_none_spec_identity():
     img = make_gradient_u16()
     outs = process_cam0(img, None)
     for i, out in enumerate(outs):
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32)
-        np.testing.assert_array_equal(out, expected)
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 65535.0
+        np.testing.assert_allclose(out, expected, rtol=1e-5)
 
 
 def test_cam0_short_spec_identity_for_missing_indices():
@@ -99,14 +101,15 @@ def test_cam0_short_spec_identity_for_missing_indices():
     spec = np.array([10.0, 0, 11.0], dtype=np.float32)  # len 3 < 14
     outs = process_cam0(img, spec)
     # slice 0 -> spec[0]=10, slice 1 -> spec[2]=11, slices 2/3 -> identity
+    # All slices are normalised ÷65535 before irradiance division.
     np.testing.assert_allclose(
-        outs[0], img[:, 0:SLICE_W].astype(np.float32) / 10.0, rtol=1e-5)
+        outs[0], img[:, 0:SLICE_W].astype(np.float32) / 65535.0 / 10.0, rtol=1e-5)
     np.testing.assert_allclose(
-        outs[1], img[:, SLICE_W:2 * SLICE_W].astype(np.float32) / 11.0, rtol=1e-5)
-    np.testing.assert_array_equal(
-        outs[2], img[:, 2 * SLICE_W:3 * SLICE_W].astype(np.float32))
-    np.testing.assert_array_equal(
-        outs[3], img[:, 3 * SLICE_W:].astype(np.float32))
+        outs[1], img[:, SLICE_W:2 * SLICE_W].astype(np.float32) / 65535.0 / 11.0, rtol=1e-5)
+    np.testing.assert_allclose(
+        outs[2], img[:, 2 * SLICE_W:3 * SLICE_W].astype(np.float32) / 65535.0, rtol=1e-5)
+    np.testing.assert_allclose(
+        outs[3], img[:, 3 * SLICE_W:].astype(np.float32) / 65535.0, rtol=1e-5)
 
 
 def test_cam0_uint8_input():
@@ -115,7 +118,8 @@ def test_cam0_uint8_input():
     outs = process_cam0(img, spec)
     for i, out in enumerate(outs):
         assert out.dtype == np.float32
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 2.0
+        # uint8 is normalised ÷255 before irradiance division.
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 255.0 / 2.0
         np.testing.assert_allclose(out, expected, rtol=1e-5)
 
 

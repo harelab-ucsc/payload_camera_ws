@@ -105,7 +105,9 @@ class AS7265xStreamNode(Node):
                 resp = [self._cmd(c) for c in cmds]
             except Exception as e2:
                 self.ser.timeout = READ_TIMEOUT
-                self.get_logger().info(f"AS7265x config failed after reconnect: {e2}. Killing node.")
+                self.get_logger().info(
+                    f"AS7265x config failed after reconnect: {e2}. Killing node."
+                )
                 self.destroy_node()
                 return
         finally:

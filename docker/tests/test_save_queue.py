@@ -48,6 +48,18 @@ def _make_node():
     node._logger = _Logger()
     node.get_logger = lambda: node._logger
     node.post_process_and_save = MagicMock()
+
+    # _db_queue + a lightweight drain thread so destroy_node's join() doesn't hang.
+    node._db_queue = queue.Queue()
+
+    def _drain():
+        while True:
+            item = node._db_queue.get()
+            node._db_queue.task_done()
+            if item is None:
+                break
+
+    threading.Thread(target=_drain, daemon=True).start()
     return node
 
 

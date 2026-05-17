@@ -54,3 +54,7 @@ else
 fi
 
 echo "Done. You can now start services with: systemctl start <service-name>, or start_services.sh"
+
+echo ""
+echo "Installing netconfig..."
+bash "$SCRIPT_DIR/install_netconfig.sh"

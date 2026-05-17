@@ -1,0 +1,26 @@
+network:
+  version: 2
+  renderer: networkd
+
+  ethernets:
+    end0:
+      dhcp4: true
+
+    enxf8e43ba5cd17:
+      dhcp4: false
+      addresses:
+        - 172.31.90.1/24
+
+  bridges:
+    br0:
+      dhcp4: false
+      interfaces: []
+#        - end0
+      addresses:
+        - 172.31.95.1/24
+
+#  wifis:
+#    wlan0:
+#      optional: true # let hostapd manage it; no IP, no DHCP
+#      interfaces: [end0, wlan0] #attach both ports to the bridge
+#      # let the bridge obtain an address via DHCP via harelab router

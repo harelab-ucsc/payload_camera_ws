@@ -95,6 +95,8 @@ def generate_launch_description():
             # the external PWM trigger in rpi_pwm_interface.py (currently 3 Hz).
             {"FrameDurationLimits": [199977, 199977]},
             {"AeEnable": False},
+            {"ExposureTime": 1000},
+            {"AnalogueGain": 1.0},
         ],
     )
 
@@ -116,6 +118,8 @@ def generate_launch_description():
             {"format":   "SBGGR16"},
             {"FrameDurationLimits": [199977, 199977]},
             {"AeEnable": False},
+            {"ExposureTime": 1000},
+            {"AnalogueGain": 1.0},
         ],
     )
 

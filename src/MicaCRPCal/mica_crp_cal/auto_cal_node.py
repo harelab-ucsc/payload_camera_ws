@@ -115,9 +115,27 @@ def _analyze_cam0(img: np.ndarray) -> tuple[float, float]:
 
 
 def _analyze_cam1(img: np.ndarray) -> tuple[float, float]:
-    """Return (bright_99, dark_05) for the full cam1 frame."""
+    """Return (bright_99, dark_05) as worst-case across the R, G, B Bayer channels.
+
+    cam1 uses SBGGR16 (Sony Bayer, Blue-Green-Green-Red quad):
+      B  at even row, even col
+      Gr at even row, odd  col
+      Gb at odd  row, even col
+      R  at odd  row, odd  col
+
+    Analysing channels separately catches a clipped R or B that would be masked
+    by the dominant (2×) green population in a whole-frame percentile.
+    """
     arr = img.astype(np.float64)
-    return float(np.percentile(arr, 99)), float(np.percentile(arr, 5))
+    channels = [
+        arr[0::2, 0::2].ravel(),                                   # B
+        np.concatenate([arr[0::2, 1::2].ravel(),
+                        arr[1::2, 0::2].ravel()]),                 # G (Gr + Gb)
+        arr[1::2, 1::2].ravel(),                                   # R
+    ]
+    p99s = [float(np.percentile(ch, 99)) for ch in channels]
+    p05s = [float(np.percentile(ch, 5))  for ch in channels]
+    return max(p99s), min(p05s)
 
 
 def _param(name: str, value) -> Parameter:
@@ -153,8 +171,17 @@ class AutoCalNode(Node):
         super().__init__("auto_cal")
         self._bridge = CvBridge()
 
-        # Altitude gate
+        # Altitude gate — set immediately if force_cal is True.
+        self.declare_parameter("force_cal", False)
+        self._force_cal: bool = self.get_parameter("force_cal").value
         self._above_alt = threading.Event()
+        if self._force_cal:
+            self._above_alt.set()
+            self.get_logger().warn(
+                "force_cal=True — skipping altitude gate and running "
+                "auto-calibration immediately. Only use this on the ground "
+                "for testing."
+            )
 
         # Per-camera frame buffers and notification events
         self._cam0_lock = threading.Lock()
@@ -226,10 +253,16 @@ class AutoCalNode(Node):
         # MultiThreadedExecutor).
         threading.Thread(target=self._cal_task, daemon=True).start()
 
-        self.get_logger().info(
-            f"AutoCalNode ready — waiting for {ALT_THRESHOLD_M} m AGL. "
-            f"Exposure limit: {MAX_EXPOSURE_US} µs | Gain limit: {max(GAIN_STEPS):.1f}×"
-        )
+        if self._force_cal:
+            self.get_logger().info(
+                f"AutoCalNode ready — force_cal active, starting immediately. "
+                f"Exposure limit: {MAX_EXPOSURE_US} µs | Gain limit: {max(GAIN_STEPS):.1f}×"
+            )
+        else:
+            self.get_logger().info(
+                f"AutoCalNode ready — waiting for {ALT_THRESHOLD_M} m AGL. "
+                f"Exposure limit: {MAX_EXPOSURE_US} µs | Gain limit: {max(GAIN_STEPS):.1f}×"
+            )
 
     # -----------------------------------------------------------------------
     # ROS callbacks
@@ -409,7 +442,17 @@ class AutoCalNode(Node):
     # -----------------------------------------------------------------------
 
     def _cal_task(self) -> None:
-        self._above_alt.wait()
+        if not self._force_cal:
+            self.get_logger().info(
+                f"auto_cal: waiting for drone to clear {ALT_THRESHOLD_M} m AGL "
+                "before starting exposure calibration and irradiance reference capture."
+            )
+        while not self._above_alt.wait(timeout=5.0):
+            self.get_logger().warn(
+                f"auto_cal: still waiting for {ALT_THRESHOLD_M} m AGL — "
+                "exposure and irradiance calibration have NOT run yet. "
+                "Cameras are in auto-exposure mode."
+            )
         self.get_logger().info(
             f"Drone above {ALT_THRESHOLD_M} m — starting auto-calibration"
         )

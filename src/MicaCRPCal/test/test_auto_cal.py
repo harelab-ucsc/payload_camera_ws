@@ -91,21 +91,54 @@ class TestAnalyzeCam0:
 # ---------------------------------------------------------------------------
 
 class TestAnalyzeCam1:
+    """
+    cam1 uses SBGGR16 Bayer: B at (even row, even col), G at (even,odd)+(odd,even),
+    R at (odd row, odd col).  _analyze_cam1 returns worst-case percentiles across
+    the three channels so a clipped R or B isn't hidden by dominant green pixels.
+    """
+
+    def _make_bayer(self, b_val, g_val, r_val, h=200, w=320):
+        """Build a synthetic SBGGR Bayer frame with uniform per-channel values."""
+        img = np.zeros((h, w), dtype=np.uint16)
+        img[0::2, 0::2] = b_val   # B
+        img[0::2, 1::2] = g_val   # Gr
+        img[1::2, 0::2] = g_val   # Gb
+        img[1::2, 1::2] = r_val   # R
+        return img
 
     def test_uniform_frame(self):
-        img = np.full((200, 320), 40000, dtype=np.uint16)
+        img = self._make_bayer(40000, 40000, 40000)
         bright, dark = _analyze_cam1(img)
         assert bright == pytest.approx(40000, abs=1)
         assert dark == pytest.approx(40000, abs=1)
 
-    def test_mixed_frame_percentiles(self):
-        """Inject known-value pixels and verify p99/p05."""
-        rng = np.random.default_rng(42)
-        img = rng.integers(10000, 50000, size=(200, 320), dtype=np.uint16)
-        bright, dark = _analyze_cam1(img)
-        arr = img.astype(np.float64)
-        assert bright == pytest.approx(np.percentile(arr, 99), abs=1)
-        assert dark == pytest.approx(np.percentile(arr, 5), abs=1)
+    def test_bright_is_max_across_channels(self):
+        """bright_99 is from the brightest channel, not the whole-frame pct."""
+        img = self._make_bayer(b_val=10000, g_val=30000, r_val=60000)
+        bright, _ = _analyze_cam1(img)
+        assert bright == pytest.approx(60000, abs=1)
+
+    def test_dark_is_min_across_channels(self):
+        """dark_05 is from the darkest channel, not the whole-frame pct."""
+        img = self._make_bayer(b_val=2000, g_val=30000, r_val=30000)
+        _, dark = _analyze_cam1(img)
+        assert dark == pytest.approx(2000, abs=1)
+
+    def test_clipped_red_not_masked_by_green(self):
+        """
+        A clipped R channel (65535) must show up in bright_99 even though G
+        has moderate values.  This is the case a whole-frame percentile would
+        miss when R pixels are only 25% of the frame.
+        """
+        img = self._make_bayer(b_val=20000, g_val=30000, r_val=65535)
+        bright, _ = _analyze_cam1(img)
+        assert bright == pytest.approx(65535, abs=1)
+
+    def test_dark_blue_not_masked_by_green(self):
+        """A very dark B channel must show up in dark_05."""
+        img = self._make_bayer(b_val=100, g_val=30000, r_val=30000)
+        _, dark = _analyze_cam1(img)
+        assert dark == pytest.approx(100, abs=2)
 
     def test_all_zero(self):
         img = np.zeros((100, 100), dtype=np.uint16)
@@ -114,10 +147,15 @@ class TestAnalyzeCam1:
         assert dark == 0.0
 
     def test_returns_tuple_of_floats(self):
-        img = np.ones((100, 100), dtype=np.uint16) * 1000
+        img = self._make_bayer(1000, 1000, 1000)
         result = _analyze_cam1(img)
         assert len(result) == 2
         assert all(isinstance(v, float) for v in result)
+
+    def test_bright_gte_dark(self):
+        img = self._make_bayer(5000, 25000, 50000)
+        bright, dark = _analyze_cam1(img)
+        assert bright >= dark
 
 
 # ---------------------------------------------------------------------------

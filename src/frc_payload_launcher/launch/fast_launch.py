@@ -118,6 +118,38 @@ def generate_launch_description():
     )
 
     # ------------------------------------------------------------------
+    # MicaCRPCal — pre-flight panel scan node.
+    # Runs for 30 s scanning cam0 (nadir camera, band-slice 0) for the CRP
+    # QR tag.  On confirmation it extracts per-band panel DN, applies the
+    # certified CRP albedo, and publishes 4 reflectance calibration factors
+    # on /panel_cal/irradiance (latched), then exits.
+    # stream_processor picks up the latched message regardless of start order.
+    # NOTE: the CRP panel must be in direct sunlight with NO shadow during scan.
+    # ------------------------------------------------------------------
+    panel_scan = Node(
+        package="mica_crp_cal",
+        executable="panel_scan",
+        name="panel_scan",
+        output="screen",
+    )
+
+    # ------------------------------------------------------------------
+    # AutoCalNode — exposure lock + irradiance reference at 6 m AGL.
+    # Subscribes to radalt, cam0, cam1, and the spectrometer. Waits for the
+    # drone to clear 6 m, binary-searches ExposureTime and AnalogueGain for
+    # each camera (preferring low gain to minimise noise), locks both cameras,
+    # then publishes the spectrometer snapshot on /panel_cal/spec_ref (latched)
+    # for stream_processor's per-cycle irradiance ratio correction.
+    # Starts at t=6 s so both cameras are live and publishing.
+    # ------------------------------------------------------------------
+    auto_cal = Node(
+        package="mica_crp_cal",
+        executable="auto_cal",
+        name="auto_cal",
+        output="screen",
+    )
+
+    # ------------------------------------------------------------------
     # stream_processor — PPS-synced save node (does split + spectral
     # correction + debayer in-process via the C++ extension; no
     # intermediate image topics on DDS)
@@ -181,6 +213,34 @@ def generate_launch_description():
         )
     )
 
+    # panel_scan starts at t=5 s (cam0 is live at t=2 s; three second margin
+    # for the driver to settle before QR scanning begins).
+    delayed_panel_scan = RegisterEventHandler(
+        OnProcessStart(
+            target_action=pps,
+            on_start=[
+                TimerAction(
+                    period=5.0,
+                    actions=[panel_scan],
+                )
+            ],
+        )
+    )
+
+    # auto_cal starts at t=6 s (both cameras live; node then self-gates on
+    # radalt > 6 m before running the exposure binary search).
+    delayed_auto_cal = RegisterEventHandler(
+        OnProcessStart(
+            target_action=pps,
+            on_start=[
+                TimerAction(
+                    period=6.0,
+                    actions=[auto_cal],
+                )
+            ],
+        )
+    )
+
     return LaunchDescription(
         [
             yaml_param_file_arg,
@@ -192,6 +252,8 @@ def generate_launch_description():
             inertial_sense_node,
             delayed_cam0,
             delayed_cam1,
+            delayed_panel_scan,
+            delayed_auto_cal,
             delayed_sync,
         ]
     )

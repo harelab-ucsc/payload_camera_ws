@@ -9,6 +9,17 @@ from launch.event_handlers import OnProcessStart
 def generate_launch_description():
     # Declare arguments
     val = "/home/pi5-alpha/ros2/ros2_iron/src/inertial-sense-sdk/ros2/launch/example_params.yaml"
+
+    force_cal_arg = DeclareLaunchArgument(
+        "force_cal",
+        default_value="false",
+        description=(
+            "Set to 'true' to skip the 6 m AGL altitude gate and run "
+            "auto-calibration immediately on startup. Use only for ground "
+            "testing — in normal flight this should be 'false'."
+        ),
+    )
+
     yaml_param_file_arg = DeclareLaunchArgument(
         "yaml_param_file",
         default_value=val,
@@ -31,6 +42,7 @@ def generate_launch_description():
     yaml_param_file = LaunchConfiguration("yaml_param_file")
     antenna_offset_gps1 = LaunchConfiguration("antenna_offset_gps1")
     mag_declination = LaunchConfiguration("mag_declination")
+    force_cal = LaunchConfiguration("force_cal")
 
     # ------------------------------------------------------------------
     # PPS node — shared by both cameras
@@ -147,6 +159,7 @@ def generate_launch_description():
         executable="auto_cal",
         name="auto_cal",
         output="screen",
+        parameters=[{"force_cal": force_cal}],
     )
 
     # ------------------------------------------------------------------
@@ -243,6 +256,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            force_cal_arg,
             yaml_param_file_arg,
             antenna_offset_gps1_arg,
             mag_declination_arg,

@@ -2,6 +2,11 @@
 
 ROS2 interface that integrates multispectral and orthomosaic, RGB camera systems.
 
+## Documentation
+
+- [Spectral Reflectance Calibration](docs/calibration.md) — operator procedure,
+  calibration math, log interpretation, and known limitations.
+
 ## Installation
 
 ## Testing

@@ -1,6 +1,7 @@
 # Spectral Reflectance Calibration
 
-This document describes how the payload converts raw camera DN values to
+This document describes how the payload converts raw camera DN (Digital Number
+— the integer pixel value read directly from the sensor) values to
 **absolute reflectance** [0, 1] and corrects for in-flight irradiance variation.
 It covers the math, the operator procedure, what the logs tell you, and what
 to do when something goes wrong.
@@ -217,8 +218,10 @@ Slice 3 (850 nm) (QR not detected in this slice — using corners from slice 0):
 ```
 This is normal. Printed black QR codes have poor contrast in NIR (ink absorbs
 poorly at 850 nm). The corners from a visible slice are used instead; accuracy
-is not materially affected because the panel is large relative to the camera
-offset.
+is not materially affected because the panel is 6 m away — at that distance
+the physical separation between the four cam0 sensors on the mux board
+subtends a negligible angle, so all four cameras see the panel at essentially
+the same position in their frames.
 
 ### Auto-exposure stepped up to higher gain
 ```

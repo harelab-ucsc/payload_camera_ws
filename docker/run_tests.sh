@@ -138,4 +138,4 @@ for f in "${lint_files[@]}"; do
     echo ""
 done
 
-[ $LINT_RC -ne 0 ] && exit $LINT_RC
+exit $LINT_RC

@@ -41,9 +41,9 @@ def generate_launch_description():
         name="pps_time_pub",
         output="screen",
         parameters=[{
-            "pps_device":        "/dev/pps0",
-            "pps_topic":         "/pps/time",
-            "use_sudo":          True,
+            "pps_device": "/dev/pps0",
+            "pps_topic": "/pps/time",
+            "use_sudo": True,
         }],
     )
 
@@ -84,12 +84,12 @@ def generate_launch_description():
         namespace="cam0",
         output="screen",
         parameters=[
-            {"camera":   0},
-            {"role":     "still"},
-            {"width":    5120},
-            {"height":   800},
+            {"camera": 0},
+            {"role": "still"},
+            {"width": 5120},
+            {"height": 800},
             {"frame_id": "cam0_optical_frame"},
-            {"format":   "R16"},
+            {"format": "R16"},
             # FrameDurationLimits is a [min, max] span in microseconds.
             # Sensor max is 199977 µs (≈5 fps); actual capture rate is set by
             # the external PWM trigger in rpi_pwm_interface.py (currently 3 Hz).
@@ -107,12 +107,12 @@ def generate_launch_description():
         namespace="cam1",
         output="screen",
         parameters=[
-            {"camera":   1},
-            {"role":     "still"},
-            {"width":    5120},
-            {"height":   800},
+            {"camera": 1},
+            {"role": "still"},
+            {"width": 5120},
+            {"height": 800},
             {"frame_id": "cam1_optical_frame"},
-            {"format":   "SBGGR16"},
+            {"format": "SBGGR16"},
             {"FrameDurationLimits": [199977, 199977]},
         ],
     )
@@ -128,13 +128,13 @@ def generate_launch_description():
         name="sync_node",
         output="screen",
         parameters=[{
-            "db_name":      "flight_data",
-            "img_format":   ".tiff",
-            "dir_name":     "parsed_flight",
+            "db_name": "flight_data",
+            "img_format": ".tiff",
+            "dir_name": "parsed_flight",
             "sensors_yaml": "sensor_params/birdsEyeSensorParams.yaml",
-            "clicks_csv":   "catch/data.csv",
-            "framerate":    3.0,
-            "gsd_m":        0.03,   # metres/pixel — update once optics are calibrated
+            "clicks_csv": "catch/data.csv",
+            "framerate": 3.0,
+            "gsd_m": 0.03,   # metres/pixel — update once optics are calibrated
         }],
     )
 

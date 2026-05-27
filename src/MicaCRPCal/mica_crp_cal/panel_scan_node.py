@@ -5,30 +5,37 @@ Subscribes to the cam0 image stream (the only nadir-pointing camera).
 cam0 is a 4-band multispectral image: four band images laid side-by-side
 horizontally, each occupying one quarter of the full frame width.
 
+Trigger
+-------
+The node waits for /cal/exposure_locked (published by auto_cal once cameras
+are locked at flight exposure settings) before opening the QR scan window.
+This guarantees the panel is imaged at the same ExposureTime and AnalogueGain
+used for all flight images — critical because mean_panel_DN encodes the
+exposure time and a mismatch would scale all reflectance values incorrectly.
+
+The 30-second scan window starts when /cal/exposure_locked is received.
+Place the CRP panel flat on the ground directly below the hovering drone.
+
 Algorithm
 ---------
-1. Run QR detection on band-slice 0 (leftmost quarter, ~450 nm) for up to
-   SCAN_TIMEOUT_S seconds.
-2. When the panel QR tag is confirmed across CONFIRM_FRAMES consecutive frames,
+1. Wait for /cal/exposure_locked from auto_cal.
+2. Run QR detection on all four cam0 band slices simultaneously for up to
+   SCAN_TIMEOUT_S seconds. Each slice uses its own corners where detected;
+   slices that cannot decode the QR (e.g. NIR at 850 nm has poor ink
+   contrast) fall back to corners from a detecting slice.
+3. When the QR tag is confirmed across CONFIRM_FRAMES consecutive frames,
    derive the flat reflective panel ROI from the QR corner geometry.
    The panel is directly below the QR code in the holder and is the same size.
-3. For each of the four cam0 band slices, compute the mean raw DN over the
+4. For each of the four cam0 band slices, compute the mean raw DN over the
    panel ROI at full sensor bit-depth.
-4. Look up the panel's certified spectral albedo at each band wavelength
+5. Look up the panel's certified spectral albedo at each band wavelength
    (interpolated from the MicaSense-supplied CRP CSV).
-5. Publish four per-band calibration factors on /panel_cal/irradiance (latched):
+6. Publish four per-band calibration factors on /panel_cal/irradiance (latched):
        factor[i] = albedo(λ_i) / (mean_panel_DN[i] / dtype_max)
 
 stream_processor passes these four factors directly to the C++ spectral_correct
 extension, which applies per pixel:
     corrected = (raw_DN / dtype_max) * factor  →  true reflectance ∈ [0, 1]
-
-Note on irradiance correction: the panel lighting conditions at scan time are
-already encoded in mean_panel_DN. A spectrometer-based irradiance ratio
-correction is intentionally omitted — the panel may be in shade while the
-spectrometer sees full sun (or vice versa), which would make such a correction
-invalid. If irradiance variation correction is required, apply it in
-post-processing using the spectrometer data saved per image cycle in the DB.
 """
 
 import time
@@ -41,7 +48,7 @@ from cv_bridge import CvBridge
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool, Float32MultiArray
 
 SCAN_TIMEOUT_S = 30.0
 CONFIRM_FRAMES = 3
@@ -124,12 +131,20 @@ class PanelScanNode(Node):
         self._detector = cv2.QRCodeDetector()
         self._confirm = 0
         self._done = False
-        self._start = time.monotonic()
         self._last_raw: np.ndarray | None = None
         # Per-slice QR corners from the most recent confirmed frame.
         # Index is slice number; value is the bbox array or None if that slice
         # could not detect the QR (e.g. NIR bands with poor ink contrast).
         self._last_bboxes: list[np.ndarray | None] = [None] * NUM_SLICES
+
+        # Exposure-lock gate: QR scanning only starts once auto_cal has locked
+        # the cameras. mean_panel_DN encodes ExposureTime — scanning before lock
+        # would produce factors calibrated at a different exposure than flight.
+        # _scan_start is set to monotonic time when the gate opens.
+        self.declare_parameter("force_cal", False)
+        self._force_cal: bool = self.get_parameter("force_cal").value
+        self._exposure_locked: bool = self._force_cal
+        self._scan_start: float | None = time.monotonic() if self._force_cal else None
 
         # CRP albedo CSV — can be overridden via ROS parameter.
         self.declare_parameter("crp_csv", str(_DEFAULT_CSV))
@@ -160,24 +175,50 @@ class PanelScanNode(Node):
             10,
         )
 
-        self.create_timer(1.0, self._watchdog)
-        self.get_logger().info(
-            f"MicaCRPCal scan started — {SCAN_TIMEOUT_S:.0f} s window. "
-            "Point cam0 at the CRP panel with the QR tag fully visible."
+        # Wait for auto_cal to lock exposure before scanning — ensures panel DN
+        # is measured at the same ExposureTime used for flight images.
+        self.create_subscription(
+            Bool,
+            "/cal/exposure_locked",
+            self._exposure_locked_cb,
+            _LATCHED_QOS,
         )
-        self.get_logger().warn(
-            "PRE-FLIGHT CHECK: The calibration panel MUST be in direct sunlight "
-            "with NO shadow on the reflective surface. Shadow on the panel at "
-            "scan time will introduce a systematic reflectance bias across the "
-            "entire flight. Abort and rescan if any shadow is present."
-        )
+
+        self.create_timer(5.0, self._watchdog)
+
+        if self._force_cal:
+            self.get_logger().warn(
+                "force_cal=True — skipping exposure-lock gate and scanning "
+                "immediately. Only use this on the ground for testing."
+            )
+            self.get_logger().warn(
+                "PRE-FLIGHT CHECK: The calibration panel MUST be in direct "
+                "sunlight with NO shadow on the reflective surface."
+            )
+        else:
+            self.get_logger().info(
+                "panel_scan: waiting for auto_cal to complete exposure "
+                "calibration (/cal/exposure_locked) before opening scan window."
+            )
 
     # ------------------------------------------------------------------
     # Callbacks
     # ------------------------------------------------------------------
 
+    def _exposure_locked_cb(self, msg: Bool) -> None:
+        if self._exposure_locked:
+            return
+        self._exposure_locked = True
+        self._scan_start = time.monotonic()
+        self.get_logger().info(
+            f"Exposure locked — opening {SCAN_TIMEOUT_S:.0f} s panel scan window. "
+            "Place the CRP panel flat on the ground directly below the drone "
+            "with the QR tag visible. Panel must be in direct sunlight with "
+            "NO shadow on the reflective surface."
+        )
+
     def _img_cb(self, msg: Image) -> None:
-        if self._done:
+        if self._done or not self._exposure_locked:
             return
 
         try:
@@ -227,7 +268,14 @@ class PanelScanNode(Node):
     def _watchdog(self) -> None:
         if self._done:
             return
-        if time.monotonic() - self._start >= SCAN_TIMEOUT_S:
+        if not self._exposure_locked:
+            self.get_logger().warn(
+                "panel_scan: still waiting for auto_cal to publish "
+                "/cal/exposure_locked — QR scan has not started yet."
+            )
+            return
+        if self._scan_start is not None and \
+                time.monotonic() - self._scan_start >= SCAN_TIMEOUT_S:
             self.get_logger().warn(
                 "Panel scan timed out — no QR tag confirmed. "
                 "stream_processor will use factor=1.0 (no spectral correction)."

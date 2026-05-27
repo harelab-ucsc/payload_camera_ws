@@ -13,9 +13,11 @@ Calibration happens in three stages at different points in the flight workflow:
 
 | Stage | When | Node | Output |
 |---|---|---|---|
-| **Panel scan** | Ground, pre-takeoff | `panel_scan` (MicaCRPCal) | 4 per-band correction factors on `/panel_cal/irradiance` |
-| **Auto-exposure + irradiance ref** | First image above 6 m AGL | `auto_cal` (MicaCRPCal) | Locked camera settings; 18-band spectrometer snapshot on `/panel_cal/spec_ref` |
+| **Auto-exposure + irradiance ref** | First image above 6 m AGL | `auto_cal` (MicaCRPCal) | Locked camera settings; 18-band spectrometer snapshot on `/panel_cal/spec_ref`; publishes `/cal/exposure_locked` |
+| **Panel scan** | At 6 m hover, after exposure lock | `panel_scan` (MicaCRPCal) | 4 per-band correction factors on `/panel_cal/irradiance` |
 | **Per-cycle correction** | Every image cycle during flight | `stream_processor` | Corrected reflectance images written to disk |
+
+> **Why exposure-lock must come first:** `factor[i] = albedo / (panel_DN / dtype_max)` encodes the ExposureTime at scan time inside `panel_DN`. If exposure changes between the panel scan and flight images, every reflectance value is wrong by `E_flight / E_panel`. By waiting for `/cal/exposure_locked`, the panel is always imaged at the same exposure as the survey.
 
 Both `/panel_cal/irradiance` and `/panel_cal/spec_ref` use **transient-local
 (latched) QoS**, so `stream_processor` receives them regardless of node start
@@ -108,46 +110,11 @@ The launch sequence:
 - `t = 6 s` — **`auto_cal`** starts (waits for 6 m AGL)
 - `t = 6 s` — **`stream_processor`** starts
 
-#### Step 2 — Panel scan (ground, within 30 seconds of launch)
+#### Step 2 — Takeoff
 
-> **⚠ CRITICAL: The CRP panel must be in direct sunlight with NO shadow on
-> the reflective grey surface. Shadow at scan time will bias all reflectance
-> values for the entire flight. Abort and rescan if any shadow is present.**
+Take off normally. Both `auto_cal` and `panel_scan` are waiting silently.
 
-1. Hold the CRP panel **horizontally, flat, reflective surface facing up**,
-   approximately **1 m below cam0**.
-2. Keep the **QR code fully visible** in the frame (QR is on the top half of
-   the holder; grey panel is on the bottom half).
-3. The panel can be at any in-plane rotation — the node handles arbitrary
-   orientation.
-4. Wait for the log to confirm:
-
-   ```
-   [panel_scan] QR detected in slice(s) [0, 1, 2] (1/3): 'RP06-...'
-   [panel_scan] QR detected in slice(s) [0, 1, 2] (2/3): 'RP06-...'
-   [panel_scan] QR detected in slice(s) [0, 1, 2] (3/3): 'RP06-...'
-   [panel_scan] Slice 0 (450 nm): mean_DN=…  albedo=0.4730  factor=…
-   [panel_scan] Slice 1 (695 nm): mean_DN=…  albedo=0.4775  factor=…
-   [panel_scan] Slice 2 (735 nm): mean_DN=…  albedo=0.4786  factor=…
-   [panel_scan] Slice 3 (850 nm): mean_DN=…  albedo=0.4776  factor=…
-   [panel_scan] Panel calibration published (4 bands) on /panel_cal/irradiance
-   ```
-
-   `panel_scan` exits automatically after publishing.
-
-5. If the 30-second window expires without confirmation:
-   ```
-   [panel_scan] Panel scan timed out — no QR tag confirmed.
-   ```
-   `stream_processor` will log an error on every cycle and save uncorrected
-   images. You can retry by manually running `panel_scan` while the rest of
-   the system is running — it will publish on the same latched topic.
-
-#### Step 3 — Takeoff
-
-Take off normally. `auto_cal` is waiting silently for 6 m AGL.
-
-#### Step 4 — Auto-calibration at 6 m AGL (automatic)
+#### Step 3 — Auto-calibration at 6 m AGL (automatic)
 
 Once the drone clears 6 m, `auto_cal` runs automatically:
 
@@ -176,6 +143,49 @@ Expected log:
 [auto_cal] Irradiance reference published (18 bands) on /panel_cal/spec_ref
 [auto_cal] Auto-calibration complete.
 ```
+
+#### Step 4 — Panel scan at 6 m hover (after auto_cal completes)
+
+Once `auto_cal` finishes it publishes `/cal/exposure_locked`. `panel_scan`
+receives this and opens its 30-second scan window. The log will show:
+
+```
+[panel_scan] Exposure locked — opening 30 s panel scan window.
+             Place the CRP panel flat on the ground directly below the drone
+             with the QR tag visible. Panel must be in direct sunlight with
+             NO shadow on the reflective surface.
+```
+
+> **⚠ CRITICAL: The CRP panel must be in direct sunlight with NO shadow on
+> the reflective grey surface. Shadow biases reflectance values for the
+> entire flight. Abort and rescan if any shadow is present.**
+
+1. Place the CRP panel **flat on the ground directly below the hovering drone**,
+   reflective surface facing up.
+2. Keep the **QR code fully visible** from above (QR on top half of holder;
+   grey panel on bottom half).
+3. The panel can be at any in-plane rotation — the node handles arbitrary
+   orientation.
+4. Wait for the log to confirm:
+
+   ```
+   [panel_scan] QR detected in slice(s) [0, 1, 2] (1/3): 'RP06-...'
+   [panel_scan] QR detected in slice(s) [0, 1, 2] (2/3): 'RP06-...'
+   [panel_scan] QR detected in slice(s) [0, 1, 2] (3/3): 'RP06-...'
+   [panel_scan] Slice 0 (450 nm): mean_DN=…  albedo=0.4730  factor=…
+   [panel_scan] Slice 1 (695 nm): mean_DN=…  albedo=0.4775  factor=…
+   [panel_scan] Slice 2 (735 nm): mean_DN=…  albedo=0.4786  factor=…
+   [panel_scan] Slice 3 (850 nm): mean_DN=…  albedo=0.4776  factor=…
+   [panel_scan] Panel calibration published (4 bands) on /panel_cal/irradiance
+   [stream_processor] Calibration complete — image capture and saving now active.
+   ```
+
+5. If the 30-second window expires without confirmation:
+   ```
+   [panel_scan] Panel scan timed out — no QR tag confirmed.
+   ```
+   Run `panel_scan` again manually while hovering. It will wait for
+   `/cal/exposure_locked` (already published, latched) and open a new window.
 
 #### Step 5 — Fly the survey
 

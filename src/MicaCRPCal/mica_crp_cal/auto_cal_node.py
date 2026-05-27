@@ -46,7 +46,7 @@ from rclpy.qos import (
     qos_profile_sensor_data,
 )
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool, Float32MultiArray
 
 try:
     from custom_msgs.msg import AltSNR
@@ -199,6 +199,13 @@ class AutoCalNode(Node):
         # /panel_cal/spec_ref publisher
         self._pub_spec_ref = self.create_publisher(
             Float32MultiArray, "/panel_cal/spec_ref", _LATCHED_QOS
+        )
+        # /cal/exposure_locked — latched Bool published once cameras are locked.
+        # panel_scan subscribes to this and only starts its QR-scan window after
+        # receiving it, ensuring the panel is imaged at the same exposure the
+        # flight images will use.
+        self._pub_exposure_locked = self.create_publisher(
+            Bool, "/cal/exposure_locked", _LATCHED_QOS
         )
 
         # SetParameters service clients for each camera
@@ -488,6 +495,11 @@ class AutoCalNode(Node):
                 "Per-cycle irradiance correction will be skipped."
             )
 
+        # Signal panel_scan that exposure is locked and it can start imaging.
+        self._pub_exposure_locked.publish(Bool(data=True))
+        self.get_logger().info(
+            "Exposure locked — panel_scan may now begin QR detection."
+        )
         self.get_logger().info("Auto-calibration complete.")
         rclpy.shutdown()
 

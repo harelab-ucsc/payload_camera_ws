@@ -130,19 +130,22 @@ def generate_launch_description():
     )
 
     # ------------------------------------------------------------------
-    # MicaCRPCal — pre-flight panel scan node.
-    # Runs for 30 s scanning cam0 (nadir camera, band-slice 0) for the CRP
-    # QR tag.  On confirmation it extracts per-band panel DN, applies the
-    # certified CRP albedo, and publishes 4 reflectance calibration factors
-    # on /panel_cal/irradiance (latched), then exits.
-    # stream_processor picks up the latched message regardless of start order.
-    # NOTE: the CRP panel must be in direct sunlight with NO shadow during scan.
+    # MicaCRPCal — panel scan node.
+    # Waits for /cal/exposure_locked from auto_cal (published once cameras are
+    # locked at flight exposure settings at 6 m AGL), then opens a 30 s window
+    # to detect the CRP QR tag via cam0.  On confirmation it extracts per-band
+    # panel DN at the locked exposure, applies the certified CRP albedo, and
+    # publishes 4 reflectance correction factors on /panel_cal/irradiance
+    # (latched).  Exits after publishing or timeout.
+    # NOTE: place the panel flat on the ground below the hovering drone,
+    # in direct sunlight with NO shadow on the reflective surface.
     # ------------------------------------------------------------------
     panel_scan = Node(
         package="mica_crp_cal",
         executable="panel_scan",
         name="panel_scan",
         output="screen",
+        parameters=[{"force_cal": force_cal}],
     )
 
     # ------------------------------------------------------------------
@@ -226,22 +229,23 @@ def generate_launch_description():
         )
     )
 
-    # panel_scan starts at t=5 s (cam0 is live at t=2 s; three second margin
-    # for the driver to settle before QR scanning begins).
+    # panel_scan and auto_cal both start at t=6 s (both cameras live).
+    # panel_scan self-gates on /cal/exposure_locked published by auto_cal,
+    # so the actual QR scan window only opens after cameras are locked.
     delayed_panel_scan = RegisterEventHandler(
         OnProcessStart(
             target_action=pps,
             on_start=[
                 TimerAction(
-                    period=5.0,
+                    period=6.0,
                     actions=[panel_scan],
                 )
             ],
         )
     )
 
-    # auto_cal starts at t=6 s (both cameras live; node then self-gates on
-    # radalt > 6 m before running the exposure binary search).
+    # auto_cal starts at t=6 s and self-gates on radalt > 6 m before running
+    # the exposure binary search.
     delayed_auto_cal = RegisterEventHandler(
         OnProcessStart(
             target_action=pps,

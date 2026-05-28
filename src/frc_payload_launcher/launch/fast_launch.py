@@ -9,17 +9,6 @@ from launch.event_handlers import OnProcessStart
 def generate_launch_description():
     # Declare arguments
     val = "/home/pi5-alpha/ros2/ros2_iron/src/inertial-sense-sdk/ros2/launch/example_params.yaml"
-
-    force_cal_arg = DeclareLaunchArgument(
-        "force_cal",
-        default_value="false",
-        description=(
-            "Set to 'true' to skip the 6 m AGL altitude gate and run "
-            "auto-calibration immediately on startup. Use only for ground "
-            "testing — in normal flight this should be 'false'."
-        ),
-    )
-
     yaml_param_file_arg = DeclareLaunchArgument(
         "yaml_param_file",
         default_value=val,
@@ -42,7 +31,6 @@ def generate_launch_description():
     yaml_param_file = LaunchConfiguration("yaml_param_file")
     antenna_offset_gps1 = LaunchConfiguration("antenna_offset_gps1")
     mag_declination = LaunchConfiguration("mag_declination")
-    force_cal = LaunchConfiguration("force_cal")
 
     # ------------------------------------------------------------------
     # PPS node — shared by both cameras
@@ -130,42 +118,6 @@ def generate_launch_description():
     )
 
     # ------------------------------------------------------------------
-    # MicaCRPCal — panel scan node.
-    # Waits for /cal/exposure_locked from auto_cal (published once cameras are
-    # locked at flight exposure settings at 6 m AGL), then opens a 30 s window
-    # to detect the CRP QR tag via cam0.  On confirmation it extracts per-band
-    # panel DN at the locked exposure, applies the certified CRP albedo, and
-    # publishes 4 reflectance correction factors on /panel_cal/irradiance
-    # (latched).  Exits after publishing or timeout.
-    # NOTE: place the panel flat on the ground below the hovering drone,
-    # in direct sunlight with NO shadow on the reflective surface.
-    # ------------------------------------------------------------------
-    panel_scan = Node(
-        package="mica_crp_cal",
-        executable="panel_scan",
-        name="panel_scan",
-        output="screen",
-        parameters=[{"force_cal": force_cal}],
-    )
-
-    # ------------------------------------------------------------------
-    # AutoCalNode — exposure lock + irradiance reference at 6 m AGL.
-    # Subscribes to radalt, cam0, cam1, and the spectrometer. Waits for the
-    # drone to clear 6 m, binary-searches ExposureTime and AnalogueGain for
-    # each camera (preferring low gain to minimise noise), locks both cameras,
-    # then publishes the spectrometer snapshot on /panel_cal/spec_ref (latched)
-    # for stream_processor's per-cycle irradiance ratio correction.
-    # Starts at t=6 s so both cameras are live and publishing.
-    # ------------------------------------------------------------------
-    auto_cal = Node(
-        package="mica_crp_cal",
-        executable="auto_cal",
-        name="auto_cal",
-        output="screen",
-        parameters=[{"force_cal": force_cal}],
-    )
-
-    # ------------------------------------------------------------------
     # stream_processor — PPS-synced save node (does split + spectral
     # correction + debayer in-process via the C++ extension; no
     # intermediate image topics on DDS)
@@ -229,38 +181,8 @@ def generate_launch_description():
         )
     )
 
-    # panel_scan and auto_cal both start at t=6 s (both cameras live).
-    # panel_scan self-gates on /cal/exposure_locked published by auto_cal,
-    # so the actual QR scan window only opens after cameras are locked.
-    delayed_panel_scan = RegisterEventHandler(
-        OnProcessStart(
-            target_action=pps,
-            on_start=[
-                TimerAction(
-                    period=6.0,
-                    actions=[panel_scan],
-                )
-            ],
-        )
-    )
-
-    # auto_cal starts at t=6 s and self-gates on radalt > 6 m before running
-    # the exposure binary search.
-    delayed_auto_cal = RegisterEventHandler(
-        OnProcessStart(
-            target_action=pps,
-            on_start=[
-                TimerAction(
-                    period=6.0,
-                    actions=[auto_cal],
-                )
-            ],
-        )
-    )
-
     return LaunchDescription(
         [
-            force_cal_arg,
             yaml_param_file_arg,
             antenna_offset_gps1_arg,
             mag_declination_arg,
@@ -270,8 +192,6 @@ def generate_launch_description():
             inertial_sense_node,
             delayed_cam0,
             delayed_cam1,
-            delayed_panel_scan,
-            delayed_auto_cal,
             delayed_sync,
         ]
     )

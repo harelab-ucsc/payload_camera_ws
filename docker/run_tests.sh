@@ -81,20 +81,9 @@ if [ "${#integration_files[@]}" -gt 0 ]; then
     [ $INTEGRATION_RC -ne 0 ] && exit $INTEGRATION_RC
 fi
 
-# ── Auto-format Python source before linting ──────────────────────────────────
-# autopep8 fixes in-place what it can (spacing, line length, imports, etc.)
-# so trivially fixable style issues never block CI.
-echo "[run_tests.sh] Auto-formatting Python source with autopep8"
-python3 -m autopep8 \
-    --in-place --aggressive \
-    --max-line-length 99 \
-    --recursive "$WS_ROOT/src" 2>/dev/null || true
-
 # ── Per-package lint tests ─────────────────────────────────────────────────────
 # Run ament lint tests (flake8, pep257, copyright) from within each package
 # directory so they only check files belonging to that package.
-# All packages are checked even if one fails; a non-zero exit is deferred to
-# the end so operators see the FULL set of violations in one run.
 echo "[run_tests.sh] Running per-package lint tests"
 
 mapfile -t lint_files < <(find \
@@ -102,7 +91,6 @@ mapfile -t lint_files < <(find \
     \( -name "test_flake8.py" -o -name "test_copyright.py" -o -name "test_pep257.py" \) \
     | sort -u 2>/dev/null || true)
 
-LINT_RC=0
 for f in "${lint_files[@]}"; do
     pkg_dir="$(dirname "$f")"
     while [[ "$pkg_dir" != "/" && "$pkg_dir" != "$WS_ROOT" && ! -f "$pkg_dir/package.xml" ]]; do
@@ -112,30 +100,8 @@ for f in "${lint_files[@]}"; do
         echo "[run_tests.sh] WARNING: no package.xml found for $f, skipping"
         continue
     fi
-
-    pkg_name="$(basename "$pkg_dir")"
-    linter="$(basename "$f" .py | sed 's/test_//')"
-    echo "[run_tests.sh] Linting $pkg_name ($linter):"
+    echo "[run_tests.sh] Linting $(basename "$pkg_dir") (from $pkg_dir):"
     pushd "$pkg_dir" > /dev/null
-
-    # Print raw linter output explicitly so violations are visible regardless
-    # of pytest capture mode — operators can see exactly what is wrong.
-    case "$linter" in
-        flake8)
-            python3 -m flake8 --max-line-length=99 . 2>&1 || true ;;
-        pep257)
-            python3 -m pydocstyle . 2>&1 || true ;;
-        copyright)
-            ;;
-    esac
-
-    # Run the ament pytest wrapper as the authoritative pass/fail gate.
-    # Do NOT let a single failure abort the loop — collect all results.
-    python3 -m pytest --import-mode=importlib "$f" -v --tb=short 2>&1 \
-        || LINT_RC=$?
-
+    python3 -m pytest --import-mode=importlib "$f" -v -s
     popd > /dev/null
-    echo ""
 done
-
-exit $LINT_RC

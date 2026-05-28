@@ -102,10 +102,12 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam0_optical_frame"},
             {"format": "R16"},
-            # FrameDurationLimits is a [min, max] span in microseconds.
-            # Sensor max is 199977 µs (≈5 fps); actual capture rate is set by
-            # the external PWM trigger in rpi_pwm_interface.py (currently 3 Hz).
-            {"FrameDurationLimits": [199977, 199977]},
+            # FrameDurationLimits [min, max] in microseconds. Max caps the sensor
+            # at ≈5 fps; actual capture rate is the external PWM trigger (3 Hz).
+            # Asymmetric range avoids pinning ExposureTime (min==max activates
+            # ExposureTimeMode internally, which then conflicts with auto_cal's
+            # binary search setting ExposureTime directly).
+            {"FrameDurationLimits": [100, 199977]},
         ],
     )
 

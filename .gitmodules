@@ -19,3 +19,6 @@
 [submodule "src/pps_time_pub"]
 	path = src/pps_time_pub
 	url = git@github.com:harelab-ucsc/pps_time_pub.git
+[submodule "src/MicaCRPCal"]
+	path = src/MicaCRPCal
+	url = git@github.com:harelab-ucsc/MicaCRPCal.git

@@ -107,7 +107,7 @@ def generate_launch_description():
             # Asymmetric range avoids pinning ExposureTime (min==max activates
             # ExposureTimeMode internally, which then conflicts with auto_cal's
             # binary search setting ExposureTime directly).
-            {"FrameDurationLimits": [100, 199977]},
+            {"FrameDurationLimits": [28554, 199977]},
         ],
     )
 

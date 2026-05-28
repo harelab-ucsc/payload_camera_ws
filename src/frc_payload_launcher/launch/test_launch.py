@@ -97,7 +97,6 @@ def generate_launch_description():
             "dir_name": TEST_OUTPUT_DIR,
             "sensors_yaml": TEST_SENSORS_YAML,
             "clicks_csv": TEST_CLICKS_CSV,
-            "require_calibration": False,
         }],
     )
 

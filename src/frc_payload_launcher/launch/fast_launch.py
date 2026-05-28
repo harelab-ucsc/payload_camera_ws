@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import RegisterEventHandler, TimerAction, DeclareLaunchArgument
+from launch.actions import RegisterEventHandler, TimerAction, DeclareLaunchArgument, Shutdown
 from launch.substitutions import LaunchConfiguration
-from launch.event_handlers import OnProcessStart
+from launch.event_handlers import OnProcessStart, OnProcessExit
 
 
 def generate_launch_description():
@@ -112,6 +112,12 @@ def generate_launch_description():
     # ------------------------------------------------------------------
     # cam1 — color Bayer sensor (arducam-pivariety 6-000c)
     # ------------------------------------------------------------------
+    # NOTE: FrameDurationLimits is intentionally omitted for cam1.
+    # cam1 uses SBGGR16 (Bayer/ISP), where the "still" role implicitly
+    # activates ExposureTimeMode=Manual. Pinning FrameDurationLimits
+    # [min==max] also implicitly sets ExposureTime, triggering a libcamera
+    # conflict that produces a spurious warning and unreliable AE state.
+    # Actual capture rate is controlled by the external PWM trigger.
     cam1 = Node(
         package="camera_ros",
         executable="camera_node",
@@ -125,7 +131,6 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam1_optical_frame"},
             {"format": "SBGGR16"},
-            {"FrameDurationLimits": [199977, 199977]},
         ],
     )
 

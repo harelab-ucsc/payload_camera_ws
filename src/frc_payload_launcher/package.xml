@@ -7,6 +7,8 @@
   <maintainer email="mwmasters10@gmail.com">pi5-alpha</maintainer>
   <license>Apache-2.0</license>
 
+  <exec_depend>mica_crp_cal</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

@@ -20,6 +20,17 @@ def generate_launch_description():
         ),
     )
 
+    indoor_cal_arg = DeclareLaunchArgument(
+        "indoor_cal",
+        default_value="5000",
+        description=(
+            "Override auto_cal's max exposure in microseconds. Default 5000 µs "
+            "is the flight-safe limit (< 1 px smear at 5 m/s). Set higher for "
+            "indoor testing where more exposure is needed to see the QR tag. "
+            "Example: indoor_cal:=33333 for ~30 fps max. NEVER use in flight."
+        ),
+    )
+
     yaml_param_file_arg = DeclareLaunchArgument(
         "yaml_param_file",
         default_value=val,
@@ -43,6 +54,7 @@ def generate_launch_description():
     antenna_offset_gps1 = LaunchConfiguration("antenna_offset_gps1")
     mag_declination = LaunchConfiguration("mag_declination")
     force_cal = LaunchConfiguration("force_cal")
+    indoor_cal = LaunchConfiguration("indoor_cal")
 
     # ------------------------------------------------------------------
     # PPS node — shared by both cameras
@@ -169,7 +181,7 @@ def generate_launch_description():
         executable="auto_cal",
         name="auto_cal",
         output="screen",
-        parameters=[{"force_cal": force_cal}],
+        parameters=[{"force_cal": force_cal, "max_exposure_us": indoor_cal}],
     )
 
     # ------------------------------------------------------------------
@@ -268,6 +280,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             force_cal_arg,
+            indoor_cal_arg,
             yaml_param_file_arg,
             antenna_offset_gps1_arg,
             mag_declination_arg,

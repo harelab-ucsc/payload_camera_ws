@@ -41,4 +41,8 @@ fi
 # on startup (ground testing only).
 LAUNCH_FILE="${LAUNCH_FILE:-fast_launch.py}"
 FORCE_CAL="${FORCE_CAL:-false}"
-exec ros2 launch frc_payload_launcher "$LAUNCH_FILE" force_cal:="$FORCE_CAL"
+# INDOOR_CAL: max exposure in µs for auto_cal binary search.
+# Default 5000 µs is the flight-safe limit. Set higher for indoor testing,
+# e.g. INDOOR_CAL=33333 for ~30 fps ceiling. NEVER use in flight.
+INDOOR_CAL="${INDOOR_CAL:-5000}"
+exec ros2 launch frc_payload_launcher "$LAUNCH_FILE" force_cal:="$FORCE_CAL" indoor_cal:="$INDOOR_CAL"

@@ -114,12 +114,17 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam0_optical_frame"},
             {"format": "R16"},
-            # role="video" instead of "still": the still role configures the IPA
-            # with ExposureTimeMode semantics that block all dynamic ExposureTime
-            # updates (AeEnable=False internally activates ExposureTimeMode=Manual,
-            # after which ExposureTime is rejected). The video role keeps the IPA
-            # in streaming mode, which allows ExposureTime to be set directly.
-            # Capture rate is the external PWM trigger regardless of role.
+            # role="video" instead of "still": video role does not activate
+            # ExposureTimeMode, which allows auto_cal's binary search to set
+            # ExposureTime directly without conflict.
+            # FrameDurationLimits [min, max] in µs: caps the sensor at ≈5 fps
+            # (one frame per PWM trigger). Without this cap, video role runs the
+            # sensor at its native ~30 fps which causes complete saturation even
+            # at minimum ExposureTime. The asymmetric range avoids pinning
+            # ExposureTime (min==max triggers ExposureTimeMode on still role,
+            # but video role handles asymmetric ranges without conflict).
+            # Sensor min frame duration = 28554 µs.
+            {"FrameDurationLimits": [28554, 199977]},
         ],
     )
 

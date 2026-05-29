@@ -97,16 +97,17 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {"camera": 0},
-            {"role": "still"},
+            {"role": "video"},
             {"width": 5120},
             {"height": 800},
             {"frame_id": "cam0_optical_frame"},
             {"format": "R16"},
-            # FrameDurationLimits intentionally omitted — same reason as cam1.
-            # Any FrameDurationLimits value (even asymmetric) causes the "still"
-            # role to activate ExposureTimeMode persistently, which then rejects
-            # all ExposureTime updates from auto_cal's binary search.
-            # Actual capture rate is controlled by the external PWM trigger.
+            # role="video" instead of "still": the still role configures the IPA
+            # with ExposureTimeMode semantics that block all dynamic ExposureTime
+            # updates (AeEnable=False internally activates ExposureTimeMode=Manual,
+            # after which ExposureTime is rejected). The video role keeps the IPA
+            # in streaming mode, which allows ExposureTime to be set directly.
+            # Capture rate is the external PWM trigger regardless of role.
         ],
     )
 

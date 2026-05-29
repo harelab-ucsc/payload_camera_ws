@@ -102,12 +102,11 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam0_optical_frame"},
             {"format": "R16"},
-            # FrameDurationLimits [min, max] in microseconds. Max caps the sensor
-            # at ≈5 fps; actual capture rate is the external PWM trigger (3 Hz).
-            # Asymmetric range avoids pinning ExposureTime (min==max activates
-            # ExposureTimeMode internally, which then conflicts with auto_cal's
-            # binary search setting ExposureTime directly).
-            {"FrameDurationLimits": [28554, 199977]},
+            # FrameDurationLimits intentionally omitted — same reason as cam1.
+            # Any FrameDurationLimits value (even asymmetric) causes the "still"
+            # role to activate ExposureTimeMode persistently, which then rejects
+            # all ExposureTime updates from auto_cal's binary search.
+            # Actual capture rate is controlled by the external PWM trigger.
         ],
     )
 

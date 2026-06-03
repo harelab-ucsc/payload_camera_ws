@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import RegisterEventHandler, TimerAction, DeclareLaunchArgument, Shutdown
+from launch.actions import RegisterEventHandler, TimerAction, DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from launch.event_handlers import OnProcessStart, OnProcessExit
+from launch.event_handlers import OnProcessStart
 
 
 def generate_launch_description():

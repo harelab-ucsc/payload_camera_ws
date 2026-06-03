@@ -75,4 +75,15 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --rm --shm-size 512m payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
+          mkdir -p /tmp/test-artifacts
+          docker run --rm --shm-size 512m \
+            -v /tmp/test-artifacts:/tmp/test-artifacts \
+            payload_camera_ws:iron bash /payload_camera_ws/docker/run_tests.sh
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: /tmp/test-artifacts/
+          if-no-files-found: ignore

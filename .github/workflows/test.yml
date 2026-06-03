@@ -31,15 +31,22 @@ jobs:
 
       - name: Run autopep8
         run: |
+          # Only format source trees owned by this repo.  Submodule working
+          # directories (src/MicaCRPCal, src/pps_time_pub, etc.) contain
+          # uncommitted changes from the submodule's own history; running
+          # autopep8 there and trying to commit from the superproject fails
+          # because superproject git add -u cannot stage submodule content.
           autopep8 --in-place --aggressive \
             --max-line-length 99 \
-            --recursive src/
+            --recursive \
+            src/as7265x_at \
+            src/frc_payload_launcher
 
       - name: Commit formatting fixes
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet; then
+          if ! git diff --ignore-submodules --quiet; then
             git add -u
             git commit -m "style: apply autopep8 auto-formatting"
             git push

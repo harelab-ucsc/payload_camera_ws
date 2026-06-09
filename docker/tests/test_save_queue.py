@@ -48,6 +48,7 @@ def _make_node():
     node._logger = _Logger()
     node.get_logger = lambda: node._logger
     node.post_process_and_save = MagicMock()
+    node._publish_mode = False
 
     # _db_queue + a lightweight drain thread so destroy_node's join() doesn't hang.
     node._db_queue = queue.Queue()

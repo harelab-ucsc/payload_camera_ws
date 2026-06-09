@@ -45,4 +45,10 @@ FORCE_CAL="${FORCE_CAL:-false}"
 # Default 5000 µs is the flight-safe limit. Set higher for indoor testing,
 # e.g. INDOOR_CAL=33333 for ~30 fps ceiling. NEVER use in flight.
 INDOOR_CAL="${INDOOR_CAL:-5000}"
+# VIO_CAL: skip altitude gate / MicaCRP and publish split images for ros2 bag.
+# Cameras start immediately, auto_cal locks exposure, sync_node publishes 8 topics.
+VIO_CAL="${VIO_CAL:-false}"
+if [ "$VIO_CAL" = "true" ]; then
+    exec ros2 launch frc_payload_launcher vio_cal_launch.py indoor_cal:="$INDOOR_CAL"
+fi
 exec ros2 launch frc_payload_launcher "$LAUNCH_FILE" force_cal:="$FORCE_CAL" indoor_cal:="$INDOOR_CAL"

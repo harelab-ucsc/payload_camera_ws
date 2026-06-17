@@ -97,19 +97,20 @@ class BagProcessor:
         print(f'[PROC]      image_msgs length: {len(self.image_msgs)}')
         print('[PROC]    Bag read done \n')
 
-        for image_msg in self.image_msgs:
-            stamp, ts_float, ts_int = self.get_timestamp(image_msg)
-            updated_image = self.get_subframe(image_msg)
+        for i, image_msg in enumerate(self.image_msgs):
+            if not i % self.rate:
+                stamp, ts_float, ts_int = self.get_timestamp(image_msg)
+                updated_image = self.get_subframe(image_msg)
 
-            if self.rectify:
-                updated_image = self.rectify_image(updated_image)
+                if self.rectify:
+                    updated_image = self.rectify_image(updated_image)
 
-            if self.save:
-                timestamp_str = f"{stamp.sec}.{stamp.nanosec:09d}"
-                self.save_image(updated_image, timestamp_str)
+                if self.save:
+                    timestamp_str = f"{stamp.sec}.{stamp.nanosec:09d}"
+                    self.save_image(updated_image, timestamp_str)
 
-            new_image = serialize_message(updated_image)
-            writer.write(self.image_topic, new_image, ts_int)
+                new_image = serialize_message(updated_image)
+                writer.write(self.image_topic, new_image, ts_int)
 
         writer.close()
         print(f'\n  --> time elapsed: {time.time()-start}')

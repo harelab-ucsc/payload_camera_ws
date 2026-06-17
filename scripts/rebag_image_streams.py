@@ -14,11 +14,46 @@ import numpy as np
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from rosbag2_py import SequentialReader, SequentialWriter, StorageOptions, ConverterOptions, TopicMetadata
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from rosidl_runtime_py.utilities import get_message
 from rclpy.serialization import deserialize_message, serialize_message
 from scipy.spatial.transform import Rotation as R
 from pyproj import Proj, Transformer
+
+
+class RigCalibration:
+
+    def __init__(self, yaml_path):
+        with open(yaml_path, "r") as f:
+            self.data = yaml.safe_load(f)
+
+    def get_camera_info(self, cam_name):
+        cam = self.data["cameras"][cam_name]
+
+        intr = cam["intrinsics"]
+        dist = cam["distortion"]
+        res  = cam["resolution"]
+
+        K = np.array([
+            [intr["fx"], 0.0, intr["cx"]],
+            [0.0, intr["fy"], intr["cy"]],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float64)
+
+        D = np.array([
+            dist["k1"],
+            dist["k2"],
+            dist["p1"],
+            dist["p2"],
+            dist.get("k3", 0.0)
+        ], dtype=np.float64)
+
+        return {
+            "K": K,
+            "D": D,
+            "width": res["width"],
+            "height": res["height"]
+        }
 
 
 class BagProcessor:
@@ -28,8 +63,9 @@ class BagProcessor:
         output_bag_path,    # Path to the output ROS2 bag file
         ds_dir,             # Path to the directory to save images/poses.json
         image_topic,        # Image topic name (e.g., /camera/image_raw)
+        rate,
         ind,                # Image subframe index/indices, from CamarrayHAT
-        intrinsics_path,    # Path to the YAML file with camera intrinsics
+        calibration_path,    # Path to the YAML file with camera intrinsics
         rectify,            # Whether or not to rectify in vi_time_sync.py (default: True)
         save,               # Whether or not to save imagery (default: False)
     ):
@@ -39,21 +75,37 @@ class BagProcessor:
         self.ds_dir = ds_dir
         self.br = CvBridge()
 
-        self.fps = None
+        self.rate = rate
         self.ind = ind
         self.image_msgs = []
 
         self.save = save
-        # self.rectify = rectify
-        # if self.rectify:
-        #     self.intrinsics = self.load_intrinsics(intrinsics_path)
-        #     self.K = np.array([[self.intrinsics["fx"], 0, self.intrinsics["cx"]],
-        #                   [0, self.intrinsics["fy"], self.intrinsics["cy"]],
-        #                   [0, 0, 1]])
-        #     self.D = np.array([self.intrinsics["k1"], self.intrinsics["k2"], self.intrinsics["r1"], self.intrinsics["r2"]])
-        #     self.width = self.intrinsics["resx"]
-        #     self.height = self.intrinsics["resy"]
-        #     self.map1, self.map2 = cv2.initUndistortRectifyMap(self.K, self.D, None, self.K, (self.width, self.height), cv2.CV_32FC1)
+
+        self.rectify = rectify
+
+        self.calib = RigCalibration(calibration_path)
+        self.camera_models = {}
+        for sensor in ["rgb", "multispec"]:
+            for ind in [1,2,3,4]:
+
+                cam_name = f"{sensor}_{ind}"
+
+                cam = self.calib.get_camera_info(cam_name)
+
+                map1, map2 = cv2.initUndistortRectifyMap(
+                    cam["K"],
+                    cam["D"],
+                    None,
+                    cam["K"],
+                    (cam["width"], cam["height"]),
+                    cv2.CV_32FC1
+                )
+
+                self.camera_models[cam_name] = {
+                    "cam": cam,
+                    "map1": map1,
+                    "map2": map2,
+                }
 
     def process_bag(self):
         start = time.time()
@@ -80,6 +132,7 @@ class BagProcessor:
                 writer.create_topic(topic)
 
         for ind in self.ind:
+            # create subframe image topics
             writer.create_topic(
                 TopicMetadata(
                     name=f"/cam{ind}/camera/image_raw",
@@ -87,17 +140,29 @@ class BagProcessor:
                     serialization_format="cdr"
                 )
             )
+            # create subframe camera_info topics
+            writer.create_topic(
+                TopicMetadata(
+                    name=f"/cam{ind}/camera/camera_info",
+                    type="sensor_msgs/msg/CameraInfo",
+                    serialization_format="cdr"
+                )
+            )
 
         print('[PROC]    Reading bag')
-        imgs = 0
         # Read and process messages
+        i = 0
         while reader.has_next():
             topic, data, timestamp = reader.read_next()
             message_type = get_message(topic_type_map[topic])
             msg = deserialize_message(data, message_type)
 
             if topic == self.image_topic:
-                self.image_msgs.append(msg)
+                if not i % self.rate:
+                    self.image_msgs.append(msg)
+                else:
+                    pass
+                i += 1
             else:
                 # Copy all other topics as-is
                 writer.write(topic, data, timestamp)
@@ -107,23 +172,37 @@ class BagProcessor:
         for image_msg in self.image_msgs:
             stamp, ts_float, ts_int = self.get_timestamp(image_msg)
             for ind in self.ind:
-                updated_image = self.get_subframe(ind, image_msg)
+                if "mono" in image_msg.encoding:
+                    cam_name = f"multispec_{ind}"
+                else:
+                    cam_name = f"rgb_{ind}"
 
-                # if self.rectify:
-                #     updated_image = self.rectify_image(updated_image)
+                # load camera parameters from memory
+                model = self.camera_models[cam_name]
+                cam = model["cam"]
+                self.map1 = model["map1"]
+                self.map2 = model["map2"]
+
+                updated_image = self.get_subframe(ind, image_msg)
+                cam_info = self.make_camera_info(cam, cam_name, image_msg)
+
+                if self.rectify:
+                    updated_image = self.rectify_image(updated_image)
 
                 if self.save:
                     timestamp_str = f"{stamp.sec}.{stamp.nanosec:09d}"
-                    if "mono" in image_msg.encoding:
-                        prefix = f"mono_cam{ind}_"
-                    else:
-                        prefix = f"cam{ind}_"                        
-                    self.save_image(updated_image, prefix, timestamp_str)
+                    self.save_image(updated_image, cam_name, timestamp_str)
 
                 updated_image = serialize_message(updated_image)
                 writer.write(
                     f"/cam{ind}/camera/image_raw",
                     updated_image,
+                    ts_int
+                )
+                cam_info = serialize_message(cam_info)
+                writer.write(
+                    f"/cam{ind}/camera/camera_info",
+                    cam_info,
                     ts_int
                 )
 
@@ -151,23 +230,37 @@ class BagProcessor:
 
     def pack_image_into_msg(self, data, image_msg):
         new_image = Image()
-        new_image.header = image_msg.header
 
+        new_image.header = image_msg.header
         new_image.height = data.shape[0]
         new_image.width = data.shape[1]
-
         new_image.encoding = image_msg.encoding
         new_image.is_bigendian = image_msg.is_bigendian
-
         new_image.data = data.tobytes()
 
         bytes_per_pixel = data.dtype.itemsize
         if len(data.shape) == 3:
             bytes_per_pixel *= data.shape[2]
-
         new_image.step = data.shape[1] * bytes_per_pixel
-
         return new_image
+
+    def make_camera_info(self, cam, cam_name, image_msg):
+        msg = CameraInfo()
+
+        msg.width = cam["width"]
+        msg.height = cam["height"]
+        msg.k = cam["K"].flatten().tolist()
+        msg.d = cam["D"].tolist()
+        msg.distortion_model = "plumb_bob"
+        msg.r = [1.0, 0.0, 0.0,
+                 0.0, 1.0, 0.0,
+                 0.0, 0.0, 1.0]
+        msg.p = [cam["K"][0,0], 0, cam["K"][0,2], 0,
+                 0, cam["K"][1,1], cam["K"][1,2], 0,
+                 0, 0, 1, 0]
+        msg.header.frame_id = f"{cam_name}_optical"
+        msg.header.stamp = image_msg.header.stamp
+        return msg
 
     def save_image(self, image_msg, prefix, timestamp_str):
         """Save the image message as a PNG file."""
@@ -184,24 +277,24 @@ class BagProcessor:
         print(f"[PROC]    Saving Image To: {savename}")
         cv2.imwrite(savename, img_data)
 
-    # def rectify_image(self, raw_image):
-    #     # Convert raw image message to OpenCV image
-    #     cv_image = self.br.imgmsg_to_cv2(
-    #         raw_image, desired_encoding='passthrough'
-    #     )
-    #
-    #     # Rectify the image using the maps
-    #     rectified_image = cv2.remap(
-    #         cv_image, self.map1, self.map2, interpolation=cv2.INTER_LINEAR
-    #     )
-    #
-    #     # Convert the rectified image back to ROS Image message
-    #     rectified_img_msg = self.br.cv2_to_imgmsg(
-    #         rectified_image, encoding='passthrough'
-    #     )
-    #     rectified_img_msg.header = raw_image.header
-    #
-    #     return rectified_img_msg
+    def rectify_image(self, raw_image):
+        # Convert raw image message to OpenCV image
+        cv_image = self.br.imgmsg_to_cv2(
+            raw_image, desired_encoding='passthrough'
+        )
+
+        # Rectify the image using the maps
+        rectified_image = cv2.remap(
+            cv_image, self.map1, self.map2, interpolation=cv2.INTER_LINEAR
+        )
+
+        # Convert the rectified image back to ROS Image message
+        rectified_img_msg = self.br.cv2_to_imgmsg(
+            rectified_image, encoding='passthrough'
+        )
+        rectified_img_msg.header = raw_image.header
+
+        return rectified_img_msg
 
 
 def main():
@@ -210,10 +303,11 @@ def main():
     parser.add_argument("output_bag", help="Path to the output ROS2 bag file")
     parser.add_argument("ds_dir",  help="Path to the directory to save images")
     parser.add_argument("image_topic", help="Image topic name (e.g., /camera/image_raw)")
-    parser.add_argument("-i", "--ind", type=int, nargs='+', help="Image subframe index or indices, from CamarrayHAT")
-    parser.add_argument("intrinsics", help="Path to the YAML file with camera intrinsics")
-    parser.add_argument("-r", "--rectify", action="store_false", help="Whether or not to rectify in vi_time_sync.py (default: True)")
-    parser.add_argument("-s", "--save", action="store_true", help="Whether or not to save imagery (default: False)")
+    parser.add_argument("--calibration", default=None, help="Path to the YAML file with camera calibration data")
+    parser.add_argument("--rate", type=int, default=1, help="Optional integer rate for frame subsampling.")
+    parser.add_argument("--ind", type=int, nargs='+', help="Image subframe index or indices, from CamarrayHAT")
+    parser.add_argument("--no-rectify", action="store_false", dest="rectify", help="Whether or not to rectify in vi_time_sync.py (default: True)")
+    parser.add_argument("--save", action="store_true", help="Whether or not to save imagery (default: False)")
 
     args = parser.parse_args()
 
@@ -224,8 +318,9 @@ def main():
         args.output_bag,
         args.ds_dir,
         args.image_topic,
+        args.rate,
         args.ind,
-        args.intrinsics,
+        args.calibration,
         args.rectify,
         args.save
     )

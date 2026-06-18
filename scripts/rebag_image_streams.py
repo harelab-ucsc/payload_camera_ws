@@ -229,7 +229,7 @@ class BagProcessor:
                 if self.save:
                     timestamp_str = f"{stamp.sec}.{stamp.nanosec:09d}"
                     self.save_image(updated_image, cam_name, timestamp_str)
-                    self.append_pose_to_json(ins_msg, image_msg, cam_name)
+                    self.append_pose_to_json(ins_msg, image_msg, cam_name, timestamp_str)
 
                 if self.rebag:
                     updated_image = serialize_message(updated_image)
@@ -355,7 +355,7 @@ class BagProcessor:
         print(f"[PROC]    Saving Image To: {savename}")
         cv2.imwrite(savename, img_data)
 
-    def append_pose_to_json(self, ins_msg, image_msg, cam_name):
+    def append_pose_to_json(self, ins_msg, image_msg, cam_name, timestamp_str):
         """Append the pose data from INS message to the JSON."""
         # Convert quaternion to R matrix
         quat = ins_msg.qn2b
@@ -389,10 +389,6 @@ class BagProcessor:
         T_cam_enu = T_ins_enu @ T_cam_ins
 
         timestamp = ins_msg.header.stamp.sec + ins_msg.header.stamp.nanosec * 1e-9
-        timestamp_str = (
-            f"{ins_msg.header.stamp.sec}."
-            f"{ins_msg.header.stamp.nanosec:09d}"
-        )
         file_path = f"{cam_name}_{timestamp_str}.png"
         pose = {
             "w": cam["width"],

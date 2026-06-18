@@ -8,6 +8,7 @@ import yaml
 import copy
 import time
 import argparse
+import utm
 
 import numpy as np
 
@@ -19,6 +20,9 @@ from rosidl_runtime_py.utilities import get_message
 from rclpy.serialization import deserialize_message, serialize_message
 from scipy.spatial.transform import Rotation as R
 from pyproj import Proj, Transformer
+
+
+BITMASK_STROBE_IN = 0x00000020
 
 
 class RigCalibration:
@@ -33,6 +37,7 @@ class RigCalibration:
         intr = cam["intrinsics"]
         dist = cam["distortion"]
         res  = cam["resolution"]
+        T_cam_ins = cam["T_cam_ins"]
 
         K = np.array([
             [intr["fx"], 0.0, intr["cx"]],
@@ -51,6 +56,7 @@ class RigCalibration:
         return {
             "K": K,
             "D": D,
+            "T_cam_ins": T_cam_ins,
             "width": res["width"],
             "height": res["height"]
         }
@@ -61,26 +67,32 @@ class BagProcessor:
         self,
         input_bag_path,     # Path to the input ROS2 bag file
         output_bag_path,    # Path to the output ROS2 bag file
-        ds_dir,             # Path to the directory to save images/poses.json
+        ds_dir,             # Path to the directory to save images/transforms.json
         image_topic,        # Image topic name (e.g., /camera/image_raw)
+        ins_topic,          # INS topic name (e.g. /ins_quat_uvw_lla)
         rate,
         ind,                # Image subframe index/indices, from CamarrayHAT
-        calibration_path,    # Path to the YAML file with camera intrinsics
+        calibration_path,   # Path to a YAML file with camera calibration data
         rectify,            # Whether or not to rectify in vi_time_sync.py (default: True)
-        save,               # Whether or not to save imagery (default: False)
+        save,               # Whether or not to save imagery (default: True)
+        rebag,              # Whether or not ro rebag the ROS2 data (default: True)
     ):
         self.input_bag_path = input_bag_path
         self.output_bag_path = output_bag_path
         self.image_topic = image_topic
+        self.ins_topic = ins_topic
         self.ds_dir = ds_dir
         self.br = CvBridge()
 
         self.rate = rate
         self.ind = ind
         self.image_msgs = []
+        self.ins_msgs = []
+        self.ins_times = None
+        self.frames = []
 
         self.save = save
-
+        self.rebag = rebag
         self.rectify = rectify
 
         self.calib = RigCalibration(calibration_path)
@@ -152,6 +164,7 @@ class BagProcessor:
         print('[PROC]    Reading bag')
         # Read and process messages
         i = 0
+        j = 0
         while reader.has_next():
             topic, data, timestamp = reader.read_next()
             message_type = get_message(topic_type_map[topic])
@@ -163,9 +176,25 @@ class BagProcessor:
                 else:
                     pass
                 i += 1
+                print(f"[PROC]        {i} images, {j} INS poses", end="\r")
+            elif topic == self.ins_topic:
+                if msg.hdw_status & BITMASK_STROBE_IN == BITMASK_STROBE_IN:
+                    if not j % self.rate:
+                        self.ins_msgs.append(msg)
+                    else:
+                        pass
+                    j += 1
+                    print(f"[PROC]        {i} images, {j} INS poses", end="\r")
             else:
                 # Copy all other topics as-is
                 writer.write(topic, data, timestamp)
+        print()
+        self.ins_times = np.array([
+            msg.header.stamp.sec +
+            msg.header.stamp.nanosec * 1e-9
+            for msg in self.ins_msgs
+        ])
+
         print(f'[PROC]      image_msgs length: {len(self.image_msgs)}')
         print('[PROC]    Bag read done \n')
 
@@ -185,6 +214,14 @@ class BagProcessor:
 
                 updated_image = self.get_subframe(ind, image_msg)
                 cam_info = self.make_camera_info(cam, cam_name, image_msg)
+                ins_msg = self.find_closest_ins(stamp, max_age=0.1)
+
+                if ins_msg is None:
+                    print(
+                        f"[PROC] [WARN]    No INS solution within 0.1s of image\n"
+                        f"[PROC] [WARN]        {cam_name}_{stamp.sec}.{stamp.nanosec}"
+                    )
+                    continue
 
                 if self.rectify:
                     updated_image = self.rectify_image(updated_image)
@@ -192,21 +229,30 @@ class BagProcessor:
                 if self.save:
                     timestamp_str = f"{stamp.sec}.{stamp.nanosec:09d}"
                     self.save_image(updated_image, cam_name, timestamp_str)
+                    self.append_pose_to_json(ins_msg, image_msg, cam_name)
 
-                updated_image = serialize_message(updated_image)
-                writer.write(
-                    f"/cam{ind}/camera/image_raw",
-                    updated_image,
-                    ts_int
-                )
-                cam_info = serialize_message(cam_info)
-                writer.write(
-                    f"/cam{ind}/camera/camera_info",
-                    cam_info,
-                    ts_int
-                )
-
+                if self.rebag:
+                    updated_image = serialize_message(updated_image)
+                    writer.write(
+                        f"/cam{ind}/camera/image_raw",
+                        updated_image,
+                        ts_int
+                    )
+                    # the following cam_info is wrong if `rectify` is `True`
+                    cam_info = serialize_message(cam_info)
+                    writer.write(
+                        f"/cam{ind}/camera/camera_info",
+                        cam_info,
+                        ts_int
+                    )
+                    ins_msgs = serialize_message(ins_msg)
+                    writer.write(
+                        f"/ins_quat_uvw_lla",
+                        ins_msg,
+                        ts_int
+                    )
         writer.close()
+        self.save_json()
         print(f'\n  --> time elapsed: {time.time()-start}')
 
     def get_timestamp(self, msg):
@@ -262,6 +308,38 @@ class BagProcessor:
         msg.header.stamp = image_msg.header.stamp
         return msg
 
+    def find_closest_ins(self, stamp, max_age=0.05):
+        """
+        Find nearest INS message.
+
+        Parameters
+        ----------
+        stamp : builtin_interfaces.msg.Time
+            Image timestamp
+
+        max_age : float
+            Maximum allowable separation in seconds
+
+        Returns
+        -------
+        DIDINS2 | None
+        """
+        if len(self.ins_msgs) == 0:
+            return None
+
+        t = stamp.sec + stamp.nanosec * 1e-9
+        idx = np.argmin(np.abs(self.ins_times - t))
+        dt = abs(self.ins_times[idx] - t)
+        if dt > max_age:
+            return None
+
+        # prune old messages
+        prune_idx = max(0, idx - 1)
+        if prune_idx > 0:
+            self.ins_msgs = self.ins_msgs[prune_idx:]
+            self.ins_times = self.ins_times[prune_idx:]
+        return self.ins_msgs[idx - prune_idx]
+
     def save_image(self, image_msg, prefix, timestamp_str):
         """Save the image message as a PNG file."""
         img_data = self.br.imgmsg_to_cv2(
@@ -270,12 +348,71 @@ class BagProcessor:
         )
         savename = os.path.join(self.ds_dir, 'images')
         if not os.path.isdir(savename):
-            print(f'  Making Save Directory: {savename}')
+            print(f'[PROC]    Making Save Directory: {savename}')
             os.makedirs(savename, exist_ok=True)
 
         savename = os.path.join(savename, f'{prefix}_{timestamp_str}.png')
         print(f"[PROC]    Saving Image To: {savename}")
         cv2.imwrite(savename, img_data)
+
+    def append_pose_to_json(self, ins_msg, image_msg, cam_name):
+        """Append the pose data from INS message to the JSON."""
+        # Convert quaternion to R matrix
+        quat = ins_msg.qn2b
+
+        # quat is [w, x, y, z], wrt NED frame
+        reordered_quat = [quat[1], quat[2], quat[3], quat[0]]
+        rot = R.from_quat(reordered_quat).as_matrix()
+        R_ned_enu = np.array([
+            [0, 1, 0],
+            [1, 0, 0],
+            [0, 0,-1]
+        ])
+        rot_enu = R_ned_enu @ rot @ R_ned_enu.T
+
+        # (longitude, latitude) -> (easting, northing, zone number, zone letter)
+        east, north, num, let = utm.from_latlon(ins_msg.lla[0], ins_msg.lla[1])
+        altitude = ins_msg.lla[2]
+        # variables num, let go unused
+
+        # make T vector in ENU
+        trans = [east, north, altitude]
+
+        # compose world pose of IMX-5
+        T_ins_enu = np.eye(4)
+        T_ins_enu[:3,:3] = rot_enu
+        T_ins_enu[:3,3] = trans
+
+        # compose world pose of viewpoint
+        cam = self.camera_models[cam_name]["cam"]
+        T_cam_ins = np.array(cam["T_cam_ins"])
+        T_cam_enu = T_ins_enu @ T_cam_ins
+
+        timestamp = ins_msg.header.stamp.sec + ins_msg.header.stamp.nanosec * 1e-9
+        timestamp_str = (
+            f"{ins_msg.header.stamp.sec}."
+            f"{ins_msg.header.stamp.nanosec:09d}"
+        )
+        file_path = f"{cam_name}_{timestamp_str}.png"
+        pose = {
+            "w": cam["width"],
+            "h": cam["height"],
+            "fl_x": cam["K"][0,0],
+            "fl_y": cam["K"][1,1],
+            "cx": cam["K"][0,2],
+            "cy": cam["K"][1,2],
+            "timestamp": timestamp,
+            "file_path": file_path,
+            "transform_matrix": T_cam_enu.tolist()
+        }
+        self.frames.append(pose)
+
+    def save_json(self):
+        """Save all frames to a JSON file."""
+        savename = os.path.join(self.ds_dir, "transforms.json")
+        with open(savename, "w") as json_file:
+            print(f'[PROC]    Saving JSON To: {savename}')
+            json.dump({"frames": self.frames}, json_file, indent=4)
 
     def rectify_image(self, raw_image):
         # Convert raw image message to OpenCV image
@@ -303,11 +440,13 @@ def main():
     parser.add_argument("output_bag", help="Path to the output ROS2 bag file")
     parser.add_argument("ds_dir",  help="Path to the directory to save images")
     parser.add_argument("image_topic", help="Image topic name (e.g., /camera/image_raw)")
-    parser.add_argument("--calibration", default=None, help="Path to the YAML file with camera calibration data")
+    parser.add_argument("ins_topic", help="INS topic name (e.g., /ins_quat_uvw_lla)")
     parser.add_argument("--rate", type=int, default=1, help="Optional integer rate for frame subsampling.")
     parser.add_argument("--ind", type=int, nargs='+', help="Image subframe index or indices, from CamarrayHAT")
+    parser.add_argument("--calibration", default=None, help="Path to the YAML file with camera calibration data")
     parser.add_argument("--no-rectify", action="store_false", dest="rectify", help="Whether or not to rectify in vi_time_sync.py (default: True)")
-    parser.add_argument("--save", action="store_true", help="Whether or not to save imagery (default: False)")
+    parser.add_argument("--no-save", action="store_false", dest="save", help="Whether or not to save imagery (default: True)")
+    parser.add_argument("--no-rebag", action="store_false", dest="rebag", help="Whether or not to save imagery (default: True)")
 
     args = parser.parse_args()
 
@@ -318,11 +457,13 @@ def main():
         args.output_bag,
         args.ds_dir,
         args.image_topic,
+        args.ins_topic,
         args.rate,
         args.ind,
         args.calibration,
         args.rectify,
-        args.save
+        args.save,
+        args.rebag,
     )
     processor.process_bag()
 

@@ -249,6 +249,7 @@ class BagProcessor:
         """Append the pose data from INS message to the JSON."""
         # Convert quaternion to R matrix
         quat = ins_msg.qn2b
+        # quat is [w, x, y, z], wrt NED frame
         reordered_quat = [quat[1], quat[2], quat[3], quat[0]]
         rot = R.from_quat(reordered_quat)
         rot = rot.as_matrix()
@@ -265,9 +266,8 @@ class BagProcessor:
         transform_matrix[:3,:3] = rot
         transform_matrix[:3,3] = trans
 
-        # compose world pose of BFLY
-        # print(len(self.intrinsics["T_cam_imu"]), len(self.intrinsics["T_cam_imu"][0]))
-        tf = np.array(self.intrinsics["T_cam_imu"])
+        # compose world pose of viewpoint
+        tf = np.array(self.intrinsics["T_cam_ins"])
         tf = np.array([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])@tf  # imu is in ENU, ins is in NED -> tf transforms between these frames
         transform_matrix = transform_matrix@tf
         transform_matrix = np.array([[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])@transform_matrix  # imu is in ENU, ins is in NED -> tf transforms between these frames

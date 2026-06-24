@@ -92,6 +92,7 @@ class BagProcessor:
         self.frames = []
         self.frames_by_timestamp = {}
         self.camera_ids = {}
+        self.image_filenames = {}
         self.image_id = 0
 
         self.save = save
@@ -359,9 +360,16 @@ class BagProcessor:
             print(f'[PROC]    Making Save Directory: {savename}')
             os.makedirs(savename, exist_ok=True)
 
-        savename = os.path.join(savename, f'{timestamp_str}.png')
+        savename = os.path.join(savename, self.get_image_filename(timestamp_str))
         print(f"[PROC]    Saving Image To: {savename}")
         cv2.imwrite(savename, img_data)
+
+    def get_image_filename(self, timestamp_str):
+        """Return a stable image filename for one grouped rig capture."""
+        if timestamp_str not in self.image_filenames:
+            image_number = len(self.image_filenames) + 1
+            self.image_filenames[timestamp_str] = f"image{image_number:04d}.png"
+        return self.image_filenames[timestamp_str]
 
     def get_camera_id(self, cam_name):
         """Return a stable COLMAP sensor ID for the camera."""
@@ -466,7 +474,7 @@ class BagProcessor:
             "sensor_id": camera_id,
             "data_id": self.image_id,
             "timestamp": timestamp,
-            "file_path": f"{cam_name}/{timestamp_str}.png",
+            "file_path": f"{cam_name}/{self.get_image_filename(timestamp_str)}",
         }
         frame["data_ids"].append(data_id)
 

@@ -90,6 +90,10 @@ class BagProcessor:
         self.ins_msgs = []
         self.ins_times = None
         self.frames = []
+        self.frames_by_timestamp = {}
+        self.camera_ids = {}
+        self.image_filenames = {}
+        self.image_id = 0
 
         self.save = save
         self.rebag = rebag
@@ -122,9 +126,8 @@ class BagProcessor:
     def process_bag(self):
         start = time.time()
 
-        # Initialize reader and writer
+        # Initialize reader and optional writer
         reader = SequentialReader()
-        writer = SequentialWriter()
         try:
             storage_options = StorageOptions(uri=self.input_bag_path, storage_id="mcap")
             converter_options = ConverterOptions(input_serialization_format="cdr", output_serialization_format="cdr")
@@ -133,33 +136,37 @@ class BagProcessor:
             storage_options = StorageOptions(uri=self.input_bag_path, storage_id="sqlite3")
             converter_options = ConverterOptions(input_serialization_format="cdr", output_serialization_format="cdr")
             reader.open(storage_options, converter_options)
-        writer.open(StorageOptions(uri=self.output_bag_path, storage_id="mcap"), converter_options)
+        writer = None
+        if self.rebag:
+            writer = SequentialWriter()
+            writer.open(StorageOptions(uri=self.output_bag_path, storage_id="mcap"), converter_options)
 
         topics_and_types = reader.get_all_topics_and_types()
 
         topic_type_map = {t.name:t.type for t in topics_and_types}
-        # Register all topics with the writer
-        for topic in topics_and_types:
-            if topic.name != self.image_topic:
-                writer.create_topic(topic)
+        if self.rebag:
+            # Register all topics with the writer
+            for topic in topics_and_types:
+                if topic.name != self.image_topic:
+                    writer.create_topic(topic)
 
-        for ind in self.ind:
-            # create subframe image topics
-            writer.create_topic(
-                TopicMetadata(
-                    name=f"/cam{ind}/camera/image_raw",
-                    type="sensor_msgs/msg/Image",
-                    serialization_format="cdr"
+            for ind in self.ind:
+                # create subframe image topics
+                writer.create_topic(
+                    TopicMetadata(
+                        name=f"/cam{ind}/camera/image_raw",
+                        type="sensor_msgs/msg/Image",
+                        serialization_format="cdr"
+                    )
                 )
-            )
-            # create subframe camera_info topics
-            writer.create_topic(
-                TopicMetadata(
-                    name=f"/cam{ind}/camera/camera_info",
-                    type="sensor_msgs/msg/CameraInfo",
-                    serialization_format="cdr"
+                # create subframe camera_info topics
+                writer.create_topic(
+                    TopicMetadata(
+                        name=f"/cam{ind}/camera/camera_info",
+                        type="sensor_msgs/msg/CameraInfo",
+                        serialization_format="cdr"
+                    )
                 )
-            )
 
         print('[PROC]    Reading bag')
         # Read and process messages
@@ -187,7 +194,8 @@ class BagProcessor:
                     print(f"[PROC]        {i} images, {j} INS poses", end="\r")
             else:
                 # Copy all other topics as-is
-                writer.write(topic, data, timestamp)
+                if self.rebag:
+                    writer.write(topic, data, timestamp)
         print()
         self.ins_times = np.array([
             msg.header.stamp.sec +
@@ -251,7 +259,8 @@ class BagProcessor:
                         ins_msg,
                         ts_int
                     )
-        writer.close()
+        if self.rebag:
+            writer.close()
         self.save_json()
         print(f'\n  --> time elapsed: {time.time()-start}')
 
@@ -346,14 +355,68 @@ class BagProcessor:
             image_msg,
             desired_encoding='passthrough'
         )
-        savename = os.path.join(self.ds_dir, 'images')
+        savename = os.path.join(self.ds_dir, 'images', prefix)
         if not os.path.isdir(savename):
             print(f'[PROC]    Making Save Directory: {savename}')
             os.makedirs(savename, exist_ok=True)
 
-        savename = os.path.join(savename, f'{prefix}_{timestamp_str}.png')
+        savename = os.path.join(savename, self.get_image_filename(timestamp_str))
         print(f"[PROC]    Saving Image To: {savename}")
         cv2.imwrite(savename, img_data)
+
+    def get_image_filename(self, timestamp_str):
+        """Return a stable image filename for one grouped rig capture."""
+        if timestamp_str not in self.image_filenames:
+            image_number = len(self.image_filenames) + 1
+            self.image_filenames[timestamp_str] = f"image{image_number:04d}.png"
+        return self.image_filenames[timestamp_str]
+
+    def get_camera_id(self, cam_name):
+        """Return a stable COLMAP sensor ID for the camera."""
+        if cam_name not in self.camera_ids:
+            self.camera_ids[cam_name] = len(self.camera_ids) + 1
+        return self.camera_ids[cam_name]
+
+    def rotation_to_quat_wxyz(self, rot):
+        """Convert a rotation matrix to a COLMAP-order quaternion."""
+        quat_xyzw = R.from_matrix(rot).as_quat()
+        return [
+            quat_xyzw[3],
+            quat_xyzw[0],
+            quat_xyzw[1],
+            quat_xyzw[2],
+        ]
+
+    def colmap_camera_config(self, cam_name):
+        """Build one COLMAP rig_config camera entry."""
+        cam_id = self.get_camera_id(cam_name)
+        cam = self.camera_models[cam_name]["cam"]
+        config = {
+            "image_prefix": f"{cam_name}/",
+            "camera_model_name": "PINHOLE",
+            "camera_params": [
+                cam["K"][0,0],
+                cam["K"][1,1],
+                cam["K"][0,2],
+                cam["K"][1,2],
+            ],
+        }
+
+        ref_cam_name = next(iter(self.camera_ids))
+        if cam_name == ref_cam_name:
+            config["ref_sensor"] = True
+            return config
+
+        T_this = np.array(cam["T_cam_ins"])
+        ref_cam = self.camera_models[ref_cam_name]["cam"]
+        T_ref = np.array(ref_cam["T_cam_ins"])
+        T_cam_from_rig = np.linalg.inv(T_this) @ T_ref
+
+        config["cam_from_rig_rotation"] = self.rotation_to_quat_wxyz(
+            T_cam_from_rig[:3,:3]
+        )
+        config["cam_from_rig_translation"] = T_cam_from_rig[:3,3].tolist()
+        return config
 
     def append_pose_to_json(self, ins_msg, image_msg, cam_name, timestamp_str):
         """Append the pose data from INS message to the JSON."""
@@ -383,32 +446,67 @@ class BagProcessor:
         T_ins_enu[:3,:3] = rot_enu
         T_ins_enu[:3,3] = trans
 
-        # compose world pose of viewpoint
-        cam = self.camera_models[cam_name]["cam"]
-        T_cam_ins = np.array(cam["T_cam_ins"])
-        T_cam_enu = T_ins_enu @ T_cam_ins
-
         timestamp = ins_msg.header.stamp.sec + ins_msg.header.stamp.nanosec * 1e-9
-        file_path = f"{cam_name}_{timestamp_str}.png"
-        pose = {
-            "w": cam["width"],
-            "h": cam["height"],
-            "fl_x": cam["K"][0,0],
-            "fl_y": cam["K"][1,1],
-            "cx": cam["K"][0,2],
-            "cy": cam["K"][1,2],
+        camera_id = self.get_camera_id(cam_name)
+        ref_cam_name = next(iter(self.camera_ids))
+        ref_cam = self.camera_models[ref_cam_name]["cam"]
+        T_ref_enu = T_ins_enu @ np.array(ref_cam["T_cam_ins"])
+        T_rig_world = np.linalg.inv(T_ref_enu)
+
+        frame = self.frames_by_timestamp.get(timestamp_str)
+        if frame is None:
+            frame = {
+                "frame_id": len(self.frames) + 1,
+                "rig_id": 1,
+                "timestamp": timestamp,
+                "rig_from_world_rotation": self.rotation_to_quat_wxyz(
+                    T_rig_world[:3,:3]
+                ),
+                "rig_from_world_translation": T_rig_world[:3,3].tolist(),
+                "data_ids": [],
+            }
+            self.frames_by_timestamp[timestamp_str] = frame
+            self.frames.append(frame)
+
+        self.image_id += 1
+        data_id = {
+            "sensor_type": "CAMERA",
+            "sensor_id": camera_id,
+            "data_id": self.image_id,
             "timestamp": timestamp,
-            "file_path": file_path,
-            "transform_matrix": T_cam_enu.tolist()
+            "file_path": f"{cam_name}/{self.get_image_filename(timestamp_str)}",
         }
-        self.frames.append(pose)
+        frame["data_ids"].append(data_id)
 
     def save_json(self):
         """Save all frames to a JSON file."""
         savename = os.path.join(self.ds_dir, "transforms.json")
+        camera_map = [
+            {
+                "sensor_type": "CAMERA",
+                "sensor_id": camera_id,
+                "camera_name": cam_name,
+                "image_prefix": f"{cam_name}/",
+            }
+            for cam_name, camera_id in self.camera_ids.items()
+        ]
+        rig_config = [{
+            "cameras": [
+                self.colmap_camera_config(cam_name)
+                for cam_name in self.camera_ids
+            ],
+        }]
         with open(savename, "w") as json_file:
             print(f'[PROC]    Saving JSON To: {savename}')
-            json.dump({"frames": self.frames}, json_file, indent=4)
+            json.dump(
+                {
+                    "rig_config": rig_config,
+                    "cameras": camera_map,
+                    "frames": self.frames,
+                },
+                json_file,
+                indent=4
+            )
 
     def rectify_image(self, raw_image):
         # Convert raw image message to OpenCV image

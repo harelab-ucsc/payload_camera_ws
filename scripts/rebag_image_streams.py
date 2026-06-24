@@ -431,27 +431,28 @@ class BagProcessor:
             [1, 0, 0],
             [0, 0,-1]
         ])
-        rot_enu = R_ned_enu @ rot @ R_ned_enu.T
 
         # (longitude, latitude) -> (easting, northing, zone number, zone letter)
         east, north, num, let = utm.from_latlon(ins_msg.lla[0], ins_msg.lla[1])
         altitude = ins_msg.lla[2]
-        # variables num, let go unused
 
-        # make T vector in ENU
-        trans = [east, north, altitude]
+        # make T vector in NED
+        trans = [north, east, -altitude]
 
         # compose world pose of IMX-5
-        T_ins_enu = np.eye(4)
-        T_ins_enu[:3,:3] = rot_enu
-        T_ins_enu[:3,3] = trans
+        T_ins_ned = np.eye(4)
+        T_ins_ned[:3,:3] = rot
+        T_ins_ned[:3,3] = trans
+        
+        T_ned_enu = np.eye(4)
+        T_ned_enu[:3,:3] = R_ned_enu
 
         timestamp = ins_msg.header.stamp.sec + ins_msg.header.stamp.nanosec * 1e-9
         camera_id = self.get_camera_id(cam_name)
         ref_cam_name = next(iter(self.camera_ids))
         ref_cam = self.camera_models[ref_cam_name]["cam"]
-        T_ref_enu = T_ins_enu @ np.array(ref_cam["T_cam_ins"])
-        T_rig_world = np.linalg.inv(T_ref_enu)
+        T_rig_enu = T_ned_enu @ T_ins_ned @ np.array(ref_cam["T_cam_ins"])
+        T_enu_rig = np.linalg.inv(T_rig_enu)
 
         frame = self.frames_by_timestamp.get(timestamp_str)
         if frame is None:
@@ -460,9 +461,9 @@ class BagProcessor:
                 "rig_id": 1,
                 "timestamp": timestamp,
                 "rig_from_world_rotation": self.rotation_to_quat_wxyz(
-                    T_rig_world[:3,:3]
+                    T_enu_rig[:3,:3]
                 ),
-                "rig_from_world_translation": T_rig_world[:3,3].tolist(),
+                "rig_from_world_translation": T_enu_rig[:3,3].tolist(),
                 "data_ids": [],
             }
             self.frames_by_timestamp[timestamp_str] = frame

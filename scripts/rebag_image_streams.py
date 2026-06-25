@@ -407,15 +407,15 @@ class BagProcessor:
             config["ref_sensor"] = True
             return config
 
-        T_this = np.array(cam["T_cam_ins"])
+        T_cam_ins = np.array(cam["T_cam_ins"])
         ref_cam = self.camera_models[ref_cam_name]["cam"]
-        T_ref = np.array(ref_cam["T_cam_ins"])
-        T_cam_from_rig = np.linalg.inv(T_this) @ T_ref
+        T_ref_ins = np.array(ref_cam["T_cam_ins"])
+        T_cam_ref = np.linalg.inv(T_ref_ins) @ T_cam_ins
 
         config["cam_from_rig_rotation"] = self.rotation_to_quat_wxyz(
-            T_cam_from_rig[:3,:3]
+            T_cam_ref[:3,:3]
         )
-        config["cam_from_rig_translation"] = T_cam_from_rig[:3,3].tolist()
+        config["cam_from_rig_translation"] = T_cam_ref[:3,3].tolist()
         return config
 
     def append_pose_to_json(self, ins_msg, image_msg, cam_name, timestamp_str):
@@ -423,7 +423,7 @@ class BagProcessor:
         # Convert quaternion to R matrix
         quat = ins_msg.qn2b
 
-        # quat is [w, x, y, z], wrt NED frame
+        # quat is [w, x, y, z], wrt NED frame -> make [x, y, z, w]
         reordered_quat = [quat[1], quat[2], quat[3], quat[0]]
         rot = R.from_quat(reordered_quat).as_matrix()
         R_ned_enu = np.array([
@@ -443,7 +443,7 @@ class BagProcessor:
         T_ins_ned = np.eye(4)
         T_ins_ned[:3,:3] = rot
         T_ins_ned[:3,3] = trans
-        
+
         T_ned_enu = np.eye(4)
         T_ned_enu[:3,:3] = R_ned_enu
 

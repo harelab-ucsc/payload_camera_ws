@@ -19,6 +19,6 @@
 [submodule "src/pps_time_pub"]
 	path = src/pps_time_pub
 	url = git@github.com:harelab-ucsc/pps_time_pub.git
-[submodule "birdseye_calibrate"]
+[submodule "src/birdseye_calibrate"]
 	path = src/birdseye_calibrate
 	url = git@github.com:harelab-ucsc/birdseye_calibrate.git

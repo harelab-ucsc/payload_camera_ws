@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-AS7265x continuous streaming ROS 2 node.
-
-Option A: Hardware-driven burst mode (ATBURST=255).
-Publishes incoming spectral data automatically.
-"""
+"""Spectrometer driver node."""
 
 import rclpy
 from rclpy.node import Node
@@ -23,25 +18,29 @@ READ_TIMEOUT = 0.1
 
 
 class AS7265xStreamNode(Node):
+    """ROS2 node for streaming AS7265x spectrometer data over serial."""
+
     def __init__(self):
-        super().__init__('as7265x_stream')
+        super().__init__("as7265x_stream")
 
         # Parameters
-        self.declare_parameter('serial_port', DEFAULT_PORT)
-        self.declare_parameter('baudrate', DEFAULT_BAUD)
-        self.declare_parameter('integration_time', 20)  # ~2.8ms increments
-        self.declare_parameter('gain', 1)               # 0–3
-        self.declare_parameter('interval', 1)           # 1–255
-        self.declare_parameter('calibrated', True)      # True → ATCDATA mode
+        self.declare_parameter("serial_port", DEFAULT_PORT)
+        self.declare_parameter("baudrate", DEFAULT_BAUD)
+        self.declare_parameter("integration_time", 20)  # ~2.8ms increments
+        self.declare_parameter("gain", 1)  # 0–3
+        self.declare_parameter("interval", 1)  # 1–255
+        self.declare_parameter("calibrated", True)  # True → ATCDATA mode
 
-        port = self.get_parameter('serial_port').value
-        baud = int(self.get_parameter('baudrate').value)
+        port = self.get_parameter("serial_port").value
+        baud = int(self.get_parameter("baudrate").value)
 
         # Publishers
-        self.pub_raw = self.create_publisher(AS7265xRaw, 'as7265x/raw_values', 10)
-        self.pub_cal = self.create_publisher(AS7265xCal, 'as7265x/calibrated_values', 10)
-        self.pub_temp = self.create_publisher(Temperature, 'as7265x/temperature', 10)
-        self.pub_debug = self.create_publisher(String, 'as7265x/at_raw', 10)
+        self.pub_raw = self.create_publisher(AS7265xRaw, "as7265x/raw_values", 10)
+        self.pub_cal = self.create_publisher(
+            AS7265xCal, "as7265x/calibrated_values", 10
+        )
+        self.pub_temp = self.create_publisher(Temperature, "as7265x/temperature", 10)
+        self.pub_debug = self.create_publisher(String, "as7265x/at_raw", 10)
 
         # Serial link
         try:
@@ -54,14 +53,6 @@ class AS7265xStreamNode(Node):
         # stop flag for clean exit
         self.stop_evt = threading.Event()
 
-        # Stop any in-progress burst streaming (e.g. from an unclean previous shutdown),
-        # flush the drain of buffered burst data, then configure fresh.
-        time.sleep(0.2)
-        self.ser.reset_input_buffer()
-        self.ser.write(b"ATBURST=0\r\n")
-        time.sleep(1.0)  # wait for device to stop streaming and flush output
-        self.ser.reset_input_buffer()
-
         # Configure device
         self.configure_device()
 
@@ -69,86 +60,100 @@ class AS7265xStreamNode(Node):
         self.reader_thread = threading.Thread(target=self.read_loop, daemon=True)
         self.reader_thread.start()
 
-    def _cmd(self, cmd: str) -> str:
-        self.ser.reset_input_buffer()
-        self.send(cmd)
-        resp = self.ser.read(256).decode('utf-8', errors='replace')
-        if 'OK\n' not in resp:
-            self.get_logger().warn(f"No OK for '{cmd}': {repr(resp)}")
-        return resp
-
     def configure_device(self):
-        port = self.get_parameter('serial_port').value
-        baud = int(self.get_parameter('baudrate').value)
-        cmds = [
-            f"ATINTTIME={int(self.get_parameter('integration_time').value)}",
-            f"ATGAIN={int(self.get_parameter('gain').value)}",
-            f"ATINTRVL={int(self.get_parameter('interval').value)}",
-            f"ATBURST=255,{1 if self.get_parameter('calibrated').value else 0}",
-        ]
-        self.ser.timeout = 2.0
-        try:
-            resp = [self._cmd(c) for c in cmds]
-        except serial.SerialException as e:
-            # Device likely did a USB reset after ATBURST=0 stopped streaming.
-            # Close, wait for USB re-enumeration, reopen, and retry once.
-            self.get_logger().warn(f"Serial disconnect during config: {e}. Reopening port...")
-            try:
-                self.ser.close()
-            except Exception:
-                pass
-            time.sleep(3.0)
-            try:
-                self.ser = serial.Serial(port, baud, timeout=2.0)
-                time.sleep(0.5)
-                self.ser.reset_input_buffer()
-                resp = [self._cmd(c) for c in cmds]
-            except Exception as e2:
-                self.ser.timeout = READ_TIMEOUT
-                self.get_logger().info(
-                    f"AS7265x config failed after reconnect: {e2}. Killing node."
-                )
-                self.destroy_node()
-                return
-        finally:
-            self.ser.timeout = READ_TIMEOUT
+        resp = []
+        # Integration time
+        it = int(self.get_parameter("integration_time").value)
+        self.send(f"ATINTTIME={it}")
+        resp.append(self.ser.read(256).decode("utf-8", errors="replace"))
 
-        if all('OK\n' in r for r in resp):
-            self.get_logger().info("AS7265x is now streaming continuously (burst mode 255).")
+        # Gain
+        g = int(self.get_parameter("gain").value)
+        self.send(f"ATGAIN={g}")
+        resp.append(self.ser.read(256).decode("utf-8", errors="replace"))
+
+        # Sampling interval multiplier
+        iv = int(self.get_parameter("interval").value)
+        self.send(f"ATINTRVL={iv}")
+        resp.append(self.ser.read(256).decode("utf-8", errors="replace"))
+
+        # Enable continuous burst mode
+        mode = 1 if self.get_parameter("calibrated").value else 0
+        self.send(f"ATBURST=255,{mode}")
+        resp.append(self.ser.read(256).decode("utf-8", errors="replace"))
+
+        # self.get_logger().info(resp)
+        if all("OK\n" in r for r in resp):
+            self.get_logger().info(
+                "AS7265x is now streaming continuously (burst mode 255)."
+            )
         else:
             self.get_logger().info("AS7265x configuration failure. Killing node.")
             self.destroy_node()
 
-    # ---------------------------------------------------------
     # Send AT command
-    # ---------------------------------------------------------
     def send(self, cmd: str):
+        """Send an AT command to the spectrometer."""
         try:
-            self.ser.write((cmd + "\r\n").encode('utf-8'))
+            self.ser.write((cmd + "\r\n").encode("utf-8"))
         except Exception as e:
             self.get_logger().error(f"Write error: {e}")
 
-    # ---------------------------------------------------------
     # Background serial reader
-    # ---------------------------------------------------------
     def read_loop(self):
+        """
+        Read and process serial data from the device.
+
+        Handles partial reads, buffering, newline parsing,
+        and UTF-8 decoding safely.
+        """
+        buf = bytearray()
+
         while not self.stop_evt.is_set():
             try:
-                # readline() blocks until \n or READ_TIMEOUT — no busy-spin
-                # on partial data unlike read(N) which returns immediately
-                raw = self.ser.readline()
-                if not raw:
+                data = self.ser.read(256)
+
+                # pyserial CAN return None on USB glitches
+                if data is None:
+                    time.sleep(0.01)
                     continue
-                line = raw.rstrip(b'\r\n').decode('utf-8', errors='replace').strip()
-                if line:
-                    self.handle_line(line)
+
+                # If no data, loop again
+                if len(data) == 0:
+                    time.sleep(0.005)
+                    continue
+
+                # Append incoming bytes
+                buf.extend(data)
+
+                # Process complete lines
+                while True:
+                    nl = buf.find(b"\n")
+                    if nl == -1:
+                        break  # no complete line yet
+
+                    # Extract line (strip CR and whitespace)
+                    raw = buf[:nl].rstrip(b"\r")
+                    del buf[: nl + 1]  # remove line including newline
+
+                    if not raw:
+                        continue
+
+                    # Decode safely
+                    try:
+                        line = raw.decode("utf-8", errors="replace").strip()
+                    except Exception as e:
+                        self.get_logger().warn(f"Decode error: {e}")
+                        continue
+
+                    if line:
+                        self.handle_line(line)
+
             except Exception as e:
                 self.get_logger().error(f"Serial read error: {e}")
                 time.sleep(0.1)
 
-    # ---------------------------------------------------------
     # Parse incoming burst lines
-    # ---------------------------------------------------------
     def handle_line(self, line: str):
         # Debug publisher
         dbg = String()
@@ -160,7 +165,7 @@ class AS7265xStreamNode(Node):
             parts = [p.strip() for p in line.split(",")]
 
             # --- Temperature format: A,B,C ---
-            if len(parts) == 3 and all(re.match(r'^-?\d+(\.\d+)?$', p) for p in parts):
+            if len(parts) == 3 and all(re.match(r"^-?\d+(\.\d+)?$", p) for p in parts):
                 temps = [float(x) for x in parts]
                 tmsg = Temperature()
                 tmsg.temperature = sum(temps) / len(temps)
@@ -169,7 +174,7 @@ class AS7265xStreamNode(Node):
                 return
 
             elif len(parts) >= 18:
-                calibrated = self.get_parameter('calibrated').value
+                calibrated = self.get_parameter("calibrated").value
 
                 if calibrated:
                     pub = self.pub_cal
@@ -198,7 +203,7 @@ class AS7265xStreamNode(Node):
             return
 
         else:
-            self.get_logger().info(f'Unexpected line recieved: \n    {line}')
+            self.get_logger().info(f"Unexpected line recieved: \n    {line}")
             return
 
     def destroy_node(self):
@@ -221,7 +226,3 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()

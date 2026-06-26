@@ -11,3 +11,6 @@ __pycache__/
 
 ## Claude Code session state
 .claude/
+
+## Sensor parameters
+sensor_params/*

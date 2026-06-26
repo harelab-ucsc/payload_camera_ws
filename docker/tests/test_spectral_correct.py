@@ -5,22 +5,15 @@ docker/tests/test_spectral_correct.py
 Unit tests for the stream_processor.spectral_correct pybind11 extension.
 No ROS required — imports the .so directly. Run with:
     pytest docker/tests/test_spectral_correct.py -v
-
-API (current):
-    process_cam0(img, cal_factors)
-        cal_factors: (4,) float32 array of per-band calibration factors,
-                     pre-computed by MicaCRPCal as:
-                         factor[i] = albedo(λ_i) / (panel_DN[i] / dtype_max)
-                     then blended with the irradiance ratio by stream_processor.
-        output[i] = (raw_DN / dtype_max) * factor[i]
-        factor ≤ 0, NaN, Inf, or missing index → fallback factor = 1.0
-                     (passthrough: output = raw_DN / dtype_max)
 """
 
 import numpy as np
 import pytest
 
 from stream_processor.spectral_correct import process_cam0, process_cam1
+
+# Source-of-truth: src/stream_processor/src/spectral_correct/process.hpp
+CAM0_ALIGNMENT = (0, 2, 9, 14)
 
 H = 8
 W = 16          # 4 slices of 4 px each — small for exact-arithmetic asserts
@@ -37,93 +30,92 @@ def make_gradient_u16():
 
 # ── process_cam0 ─────────────────────────────────────────────────────────────
 
-def test_cam0_per_band_factor_multiplication():
-    """Each slice is multiplied by its own calibration factor."""
+def test_cam0_per_band_division():
     img = make_gradient_u16()
-    # 4-element factor array — one per cam0 band slice.
-    factors = np.array([10.0, 11.0, 12.0, 13.0], dtype=np.float32)
+    spec = np.zeros(18, dtype=np.float32)
+    spec[CAM0_ALIGNMENT[0]] = 10.0
+    spec[CAM0_ALIGNMENT[1]] = 11.0
+    spec[CAM0_ALIGNMENT[2]] = 12.0
+    spec[CAM0_ALIGNMENT[3]] = 13.0
 
-    outs = process_cam0(img, factors)
+    outs = process_cam0(img, spec)
     assert len(outs) == 4
+    expected_divisors = (10.0, 11.0, 12.0, 13.0)
     for i, out in enumerate(outs):
         assert out.dtype == np.float32
         assert out.shape == (H, SLICE_W)
-        # output = (raw_DN / dtype_max) * factor[i]
-        expected = np.full(
-            (H, SLICE_W),
-            (i + 1) * 1000 / 65535.0 * factors[i],
-            dtype=np.float32,
-        )
+        expected = np.full((H, SLICE_W), (i + 1) * 1000 / expected_divisors[i],
+                           dtype=np.float32)
         np.testing.assert_allclose(out, expected, rtol=1e-5)
 
 
 def test_cam0_owns_memory():
     """Output must outlive the input — pybind must allocate fresh buffers."""
     img = make_gradient_u16()
-    factors = np.ones(4, dtype=np.float32)
-    outs = process_cam0(img, factors)
+    spec = np.ones(18, dtype=np.float32)
+    outs = process_cam0(img, spec)
     img[...] = 0   # mutate input
     assert outs[0][0, 0] != 0  # output unaffected -> not a view
 
 
-def test_cam0_zero_factor_fallback():
-    """factor == 0 is invalid → falls back to 1.0 (passthrough normalised)."""
+def test_cam0_zero_irradiance_passthrough():
+    """spec_vals[i] == 0 for slice i -> identity (cast to float32)."""
     img = make_gradient_u16()
-    factors = np.zeros(4, dtype=np.float32)  # all zero → all fallback
-    outs = process_cam0(img, factors)
+    spec = np.zeros(18, dtype=np.float32)
+    # Leave all 4 alignment indices at 0 -> all slices identity
+    outs = process_cam0(img, spec)
     for i, out in enumerate(outs):
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 65535.0
-        np.testing.assert_allclose(out, expected, rtol=1e-5)
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32)
+        np.testing.assert_array_equal(out, expected)
 
 
 def test_cam0_nan_inf_passthrough():
-    """NaN, Inf, and negative factors fall back to 1.0; valid positive factor is applied."""
     img = make_gradient_u16()
-    factors = np.array([float('nan'), float('inf'), -5.0, 13.0], dtype=np.float32)
-    outs = process_cam0(img, factors)
-    # Slices 0-2: invalid factor → fallback to 1.0 → passthrough normalised
+    spec = np.zeros(18, dtype=np.float32)
+    spec[CAM0_ALIGNMENT[0]] = float('nan')
+    spec[CAM0_ALIGNMENT[1]] = float('inf')
+    spec[CAM0_ALIGNMENT[2]] = -5.0           # negative -> identity too
+    spec[CAM0_ALIGNMENT[3]] = 13.0           # the only one that should divide
+
+    outs = process_cam0(img, spec)
     for i in range(3):
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 65535.0
-        np.testing.assert_allclose(outs[i], expected, rtol=1e-5)
-    # Slice 3: factor=13.0 → multiplied
-    expected3 = img[:, 3 * SLICE_W:].astype(np.float32) / 65535.0 * 13.0
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32)
+        np.testing.assert_array_equal(outs[i], expected)
+    expected3 = img[:, 3 * SLICE_W:].astype(np.float32) / 13.0
     np.testing.assert_allclose(outs[3], expected3, rtol=1e-5)
 
 
 def test_cam0_none_spec_identity():
-    """None cal_factors → all factors = 1.0 → passthrough normalised."""
     img = make_gradient_u16()
     outs = process_cam0(img, None)
     for i, out in enumerate(outs):
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 65535.0
-        np.testing.assert_allclose(out, expected, rtol=1e-5)
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32)
+        np.testing.assert_array_equal(out, expected)
 
 
-def test_cam0_short_factors_fallback_for_missing_indices():
-    """cal_factors array shorter than 4 → missing slices fall back to factor=1.0."""
+def test_cam0_short_spec_identity_for_missing_indices():
+    """spec_vals shorter than CAM0_ALIGNMENT[max]=14 -> identity for those."""
     img = make_gradient_u16()
-    # 3-element array: slice 0→factor[0], slice 1→factor[1], slice 2→factor[2],
-    # slice 3 is out of bounds → fallback to 1.0.
-    factors = np.array([10.0, 11.0, 12.0], dtype=np.float32)
-    outs = process_cam0(img, factors)
+    spec = np.array([10.0, 0, 11.0], dtype=np.float32)  # len 3 < 14
+    outs = process_cam0(img, spec)
+    # slice 0 -> spec[0]=10, slice 1 -> spec[2]=11, slices 2/3 -> identity
     np.testing.assert_allclose(
-        outs[0], img[:, 0:SLICE_W].astype(np.float32) / 65535.0 * 10.0, rtol=1e-5)
+        outs[0], img[:, 0:SLICE_W].astype(np.float32) / 10.0, rtol=1e-5)
     np.testing.assert_allclose(
-        outs[1], img[:, SLICE_W:2 * SLICE_W].astype(np.float32) / 65535.0 * 11.0, rtol=1e-5)
-    np.testing.assert_allclose(
-        outs[2], img[:, 2 * SLICE_W:3 * SLICE_W].astype(np.float32) / 65535.0 * 12.0, rtol=1e-5)
-    np.testing.assert_allclose(
-        outs[3], img[:, 3 * SLICE_W:].astype(np.float32) / 65535.0, rtol=1e-5)
+        outs[1], img[:, SLICE_W:2 * SLICE_W].astype(np.float32) / 11.0, rtol=1e-5)
+    np.testing.assert_array_equal(
+        outs[2], img[:, 2 * SLICE_W:3 * SLICE_W].astype(np.float32))
+    np.testing.assert_array_equal(
+        outs[3], img[:, 3 * SLICE_W:].astype(np.float32))
 
 
 def test_cam0_uint8_input():
-    """uint8 input is normalised ÷255 then multiplied by the calibration factor."""
     img = (make_gradient_u16() // 8).astype(np.uint8)
-    factors = np.full(4, 2.0, dtype=np.float32)
-    outs = process_cam0(img, factors)
+    spec = np.full(18, 2.0, dtype=np.float32)
+    outs = process_cam0(img, spec)
     for i, out in enumerate(outs):
         assert out.dtype == np.float32
-        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 255.0 * 2.0
+        expected = img[:, i * SLICE_W:(i + 1) * SLICE_W].astype(np.float32) / 2.0
         np.testing.assert_allclose(out, expected, rtol=1e-5)
 
 

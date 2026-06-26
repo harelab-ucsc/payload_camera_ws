@@ -47,7 +47,7 @@ RUN rosdep update && \
         --from-paths src \
         --ignore-src \
         --rosdistro iron \
-        --skip-keys "libcamera OpenCV camera_info_manager image_transport image_view python3-deprecated ament_cmake_pyflakes ament_cmake_mypy ament_cmake_pep257 ament_cmake_flake8 ament_cmake_lint_cmake ament_cmake_cppcheck ament_cmake_clang_format ament_cmake_xmllint clang-format ainsteintools" \
+        --skip-keys "libcamera OpenCV camera_info_manager image_transport image_view python3-deprecated ament_cmake_pyflakes ament_cmake_mypy ament_cmake_pep257 ament_cmake_flake8 ament_cmake_lint_cmake ament_cmake_cppcheck ament_cmake_clang_format ament_cmake_xmllint clang-format ainsteintools ament_python" \
         -y
 
 # ─── Build the workspace ──────────────────────────────────────────────────────
@@ -55,7 +55,11 @@ RUN rosdep update && \
 # Ubuntu 22.04 ships libcamera 0~git20200629 which is too old for x86 builds.
 # These packages are skipped here; on real Pi hardware colcon build runs without
 # --packages-skip and they will build against the Pi's native libcamera.
-RUN . /opt/ros/iron/setup.sh && \
+#
+# Remove the .colconignore that prevents stub_msgs from being built on the Pi
+# (stubs are needed here to substitute for missing hardware packages).
+RUN rm -f docker/COLCON_IGNORE && \
+    . /opt/ros/iron/setup.sh && \
     colcon build \
         --symlink-install \
         --packages-skip camera_ros camera_ros_bringup \

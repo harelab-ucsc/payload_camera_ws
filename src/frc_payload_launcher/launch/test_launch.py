@@ -40,13 +40,19 @@ def generate_launch_description():
     fake_cam0 = ExecuteProcess(
         cmd=[
             sys.executable, FAKE_PUB,
-            "--topic",    "/cam0/camera_node/image_raw",
-            "--pps",      "/pps/time",
-            "--rate",     str(TEST_RATE),
+            "--topic", "/cam0/camera_node/image_raw",
+            "--pps", "/pps/time",
+            "--rate", str(TEST_RATE),
             "--pps-rate", str(TEST_PPS_RATE),
+<<<<<<< HEAD
             "--pattern",  "gradient",
             "--width",    str(TEST_WIDTH),
             "--height",   str(TEST_HEIGHT),
+=======
+            "--pattern", "gradient",
+            "--width", str(TEST_WIDTH),
+            "--height", str(TEST_HEIGHT),
+>>>>>>> main
             "--encoding", "mono16",
         ],
         output="screen",
@@ -59,12 +65,19 @@ def generate_launch_description():
     fake_cam1 = ExecuteProcess(
         cmd=[
             sys.executable, FAKE_PUB,
-            "--topic",    "/cam1/camera_node/image_raw",
+            "--topic", "/cam1/camera_node/image_raw",
             "--no-pps",
+<<<<<<< HEAD
             "--rate",     str(TEST_RATE),
             "--pattern",  "gradient",
             "--width",    str(TEST_WIDTH),
             "--height",   str(TEST_HEIGHT),
+=======
+            "--rate", str(TEST_RATE),
+            "--pattern", "gradient",
+            "--width", str(TEST_WIDTH),
+            "--height", str(TEST_HEIGHT),
+>>>>>>> main
             "--encoding", "bayer_bggr16",
         ],
         output="screen",
@@ -92,11 +105,20 @@ def generate_launch_description():
         name="sync_node",
         output="screen",
         parameters=[{
+<<<<<<< HEAD
             "db_name":      "test_flight_data",
             "img_format":   ".tiff",
             "dir_name":     TEST_OUTPUT_DIR,
             "sensors_yaml": TEST_SENSORS_YAML,
             "clicks_csv":   TEST_CLICKS_CSV,
+=======
+            "db_name": "test_flight_data",
+            "img_format": ".tiff",
+            "dir_name": TEST_OUTPUT_DIR,
+            "sensors_yaml": TEST_SENSORS_YAML,
+            "clicks_csv": TEST_CLICKS_CSV,
+            "require_calibration": False,
+>>>>>>> main
         }],
     )
 

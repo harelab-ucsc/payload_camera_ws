@@ -6,7 +6,6 @@ from launch.event_handlers import OnProcessStart
 
 
 def generate_launch_description():
-
     # ------------------------------------------------------------------
     # PPS node — shared by both cameras
     # ------------------------------------------------------------------
@@ -15,11 +14,13 @@ def generate_launch_description():
         executable="pps_time_pub",
         name="pps_time_pub",
         output="screen",
-        parameters=[{
-            "pps_device":        "/dev/pps0",
-            "pps_topic":         "/pps/time",
-            "use_sudo":          True,
-        }],
+        parameters=[
+            {
+                "pps_device": "/dev/pps0",
+                "pps_topic": "/pps/time",
+                "use_sudo": True,
+            }
+        ],
     )
 
     # ------------------------------------------------------------------
@@ -32,12 +33,12 @@ def generate_launch_description():
         namespace="cam0",
         output="screen",
         parameters=[
-            {"camera":   0},
-            {"role":     "still"},
-            {"width":    5120},
-            {"height":   800},
+            {"camera": 0},
+            {"role": "still"},
+            {"width": 5120},
+            {"height": 800},
             {"frame_id": "cam0_optical_frame"},
-            {"format":   "R16"},
+            {"format": "R16"},
         ],
     )
 
@@ -51,12 +52,12 @@ def generate_launch_description():
         namespace="cam1",
         output="screen",
         parameters=[
-            {"camera":   1},
-            {"role":     "still"},
-            {"width":    5120},
-            {"height":   800},
+            {"camera": 1},
+            {"role": "still"},
+            {"width": 5120},
+            {"height": 800},
             {"frame_id": "cam1_optical_frame"},
-            {"format":   "SBGGR16"},
+            {"format": "SBGGR16"},
         ],
     )
 
@@ -91,8 +92,10 @@ def generate_launch_description():
         )
     )
 
-    return LaunchDescription([
-        pps,
-        delayed_cam0,
-        delayed_cam1,
-    ])
+    return LaunchDescription(
+        [
+            pps,
+            delayed_cam0,
+            delayed_cam1,
+        ]
+    )

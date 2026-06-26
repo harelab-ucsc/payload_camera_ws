@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User=pi5-alpha
-ExecStart=/usr/bin/python3 /home/pi5-alpha/ros2/ros2_iron/src/birdseye/scripts/rpi_pwm_interface.py
+ExecStart=/usr/bin/python3 /home/pi5-alpha/ros2/payload_camera_ws/src/frc_payload_launcher/pwm/rpi_pwm_interface.py
 Restart=on-failure
 RestartSec=2
 

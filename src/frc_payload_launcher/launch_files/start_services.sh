@@ -37,5 +37,8 @@ fi
 
 # Launch ROS2 nodes (replaces shell process so signals propagate cleanly).
 # Override LAUNCH_FILE to use a different launch file (e.g. test_launch.py for CI).
+# Set FORCE_CAL=true to skip the 6 m AGL gate and run auto-calibration immediately
+# on startup (ground testing only).
 LAUNCH_FILE="${LAUNCH_FILE:-fast_launch.py}"
-exec ros2 launch frc_payload_launcher "$LAUNCH_FILE"
+FORCE_CAL="${FORCE_CAL:-false}"
+exec ros2 launch frc_payload_launcher "$LAUNCH_FILE" force_cal:="$FORCE_CAL"

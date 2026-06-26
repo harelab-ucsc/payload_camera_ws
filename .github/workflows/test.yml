@@ -5,13 +5,62 @@ on:
   pull_request:
 
 jobs:
-  test:
+  # ── Auto-format ─────────────────────────────────────────────────────────────
+  # Runs autopep8 on all Python source and commits any fixes back to the
+  # branch.  Runs first so the test job always sees formatted code.
+  autoformat:
     runs-on: ubuntu-latest
+    # Only commit back on branch pushes — PRs from forks can't push.
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          # Use a token so the bot push triggers subsequent CI runs.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install autopep8
+        run: pip install "autopep8" "pycodestyle>=2.7.0,<2.9.0"
+
+      - name: Run autopep8
+        run: |
+          autopep8 --in-place --aggressive \
+            --max-line-length 99 \
+            --recursive src/
+
+      - name: Commit formatting fixes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add -u
+            git commit -m "style: apply autopep8 auto-formatting"
+            git push
+          else
+            echo "No formatting changes."
+          fi
+
+  # ── Build & test ─────────────────────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    # Wait for autoformat so the test always sees formatted source.
+    needs: [autoformat]
+    # Also run when autoformat is skipped (PR from fork).
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # Pull the latest commit in case autoformat just pushed one.
+          ref: ${{ github.ref }}
 
       - name: Build
         run: |

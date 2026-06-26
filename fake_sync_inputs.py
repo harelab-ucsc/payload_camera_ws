@@ -89,6 +89,8 @@ class FakeSyncInputs(Node):
 
     def _publish_ins(self):
         msg = DIDINS2()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "ins"
         # SyncNode.ins_cb requires hdw_status & 0x20 (HDW_STROBE) to latch.
         msg.hdw_status = 0x00000020
         msg.ins_status = 0x00040000  # nominal solution bits

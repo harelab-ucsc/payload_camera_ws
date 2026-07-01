@@ -39,6 +39,11 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam0_optical_frame"},
             {"format": "R16"},
+            {"AeEnable": false},
+            {"ExposureTimeMode": 1},
+            {"AnalogueGainMode": 1},
+            {"ExposureTime": 1000},
+            {"jpeg_quality": 15},
         ],
     )
 
@@ -58,6 +63,11 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam1_optical_frame"},
             {"format": "SBGGR16"},
+            {"AeEnable": false},
+            {"ExposureTimeMode": 1},
+            {"AnalogueGainMode": 1},
+            {"ExposureTime": 1000},
+            {"jpeg_quality": 15},
         ],
     )
 

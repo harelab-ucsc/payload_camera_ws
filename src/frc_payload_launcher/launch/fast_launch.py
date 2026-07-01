@@ -184,8 +184,7 @@ def generate_launch_description():
             "db_name": "flight_data",
             "img_format": ".tiff",
             "dir_name": "parsed_flight",
-            "sensors_yaml": "sensor_params/birdsEyeSensorParams.yaml",
-            "clicks_csv": "catch/data.csv",
+            "calibration_path": "sensor_params/birdseye_v2_camchain.yaml",
             "framerate": 3.0,
             "gsd_m": 0.03,   # metres/pixel — update once optics are calibrated
         }],

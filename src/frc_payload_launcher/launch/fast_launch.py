@@ -106,6 +106,13 @@ def generate_launch_description():
             # Sensor max is 199977 µs (≈5 fps); actual capture rate is set by
             # the external PWM trigger in rpi_pwm_interface.py (currently 3 Hz).
             {"FrameDurationLimits": [199977, 199977]},
+            {"AeEnable": False},
+            {"ExposureTimeMode": 1},
+            {"AnalogueGainMode": 1},
+            {"ExposureTime": 1000},
+            {"AnalogueGain": 1.0},
+            {"jpeg_quality": 15},
+
         ],
     )
 
@@ -131,6 +138,13 @@ def generate_launch_description():
             {"height": 800},
             {"frame_id": "cam1_optical_frame"},
             {"format": "SBGGR16"},
+            # {"FrameDurationLimits": [199977, 199977]},
+            {"AeEnable": False},
+            {"ExposureTimeMode": 1},
+            {"AnalogueGainMode": 1},
+            {"ExposureTime": 1000},
+            {"AnalogueGain": 1.0},
+            {"jpeg_quality": 15},
         ],
     )
 

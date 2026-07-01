@@ -186,7 +186,8 @@ def generate_launch_description():
             "dir_name": "parsed_flight",
             "calibration_path": "sensor_params/birdseye_v2_camchain.yaml",
             "framerate": 3.0,
-            "gsd_m": 0.03,   # metres/pixel — update once optics are calibrated
+            "gsd_m": 0.03,   # metres/pixel — update once optics are calibrated,
+            "require_calibration": False,
         }],
     )
 

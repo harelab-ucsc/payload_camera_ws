@@ -196,7 +196,7 @@ def generate_launch_description():
         output="screen",
         parameters=[{
             "db_name": "flight_data",
-            "img_format": ".tiff",
+            "img_format": ".jpeg",
             "dir_name": "parsed_flight",
             "calibration_path": "sensor_params/birdseye_v2_camchain.yaml",
             "framerate": 3.0,

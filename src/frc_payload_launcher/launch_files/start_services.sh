@@ -41,4 +41,4 @@ fi
 # on startup (ground testing only).
 LAUNCH_FILE="${LAUNCH_FILE:-fast_launch.py}"
 FORCE_CAL="${FORCE_CAL:-false}"
-exec ros2 launch frc_payload_launcher "$LAUNCH_FILE" force_cal:="$FORCE_CAL"
+exec ros2 launch frc_payload_launcher "$LAUNCH_FILE" force_cal:="$FORCE_CAL" img_format:=".jpeg"

@@ -1,4 +1,5 @@
 # camera_ws - .gitignore
+legacy/
 
 ## build
 build/
@@ -12,5 +13,7 @@ __pycache__/
 ## Claude Code session state
 .claude/
 
-## Sensor parameters
-sensor_params/*
+*.jpeg
+*.png
+
+labels.txt

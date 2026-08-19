@@ -25,3 +25,6 @@
 	[submodule "src/MicaCRPCal"]
 		path = src/MicaCRPCal
 		url = git@github.com:harelab-ucsc/MicaCRPCal.git
+[submodule "scripts/uav_image_postproc"]
+	path = scripts/uav_image_postproc
+	url = https://github.com/harelab-ucsc/uav_image_postproc.git

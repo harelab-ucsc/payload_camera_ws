@@ -5,6 +5,8 @@ from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction, De
 from launch.substitutions import LaunchConfiguration
 from launch.event_handlers import OnProcessStart, OnProcessExit
 
+from datetime import datetime
+
 
 def generate_launch_description():
     # Declare arguments
@@ -189,6 +191,7 @@ def generate_launch_description():
     # correction + debayer in-process via the C++ extension; no
     # intermediate image topics on DDS)
     # ------------------------------------------------------------------
+    now = datetime.now()
     sync_node = Node(
         package="stream_processor",
         executable="sync_node",
@@ -197,7 +200,7 @@ def generate_launch_description():
         parameters=[{
             "db_name": "flight_data",
             "img_format": ".jpeg",
-            "dir_name": "parsed_flight",
+            "dir_name": now.strftime("%Y-%m-%d_%H:%M:%S"),
             "calibration_path": "sensor_params/birdseye_v2_camchain.yaml",
             "framerate": 1.0,
             "gsd_m": 0.03,   # metres/pixel — update once optics are calibrated,

@@ -205,6 +205,24 @@ def generate_launch_description():
         }],
     )
 
+    topics_to_record = [
+        '/as7265x/calibrated_values',
+        '/cam0/camera_node/camera_info',
+        '/cam0/camera_node/image_raw',
+        '/cam1/camera_node/camera_info',
+        '/cam1/camera_node/image_raw',
+        '/ins_quat_uvw_lla',
+        '/odom_ins_enu',
+        '/pps/time',
+        '/rad_altitude',
+        '/sync/capture_complete'
+    ]
+    record_command = ['ros2', 'bag', 'record'] + topics_to_record
+    bag_record = ExecuteProcess(
+            cmd=record_command,
+            output='screen',
+    )
+
     # ------------------------------------------------------------------
     # Sequencing:
     #   t=0.0s   pps starts
@@ -243,6 +261,18 @@ def generate_launch_description():
                 TimerAction(
                     period=6.0,
                     actions=[sync_node],
+                )
+            ],
+        )
+    )
+
+    delayed_record = RegisterEventHandler(
+        OnProcessStart(
+            target_action=pps,
+            on_start=[
+                TimerAction(
+                    period=10.0,
+                    actions=[bag_record],
                 )
             ],
         )
@@ -292,5 +322,6 @@ def generate_launch_description():
       #      delayed_panel_scan,
       #      delayed_auto_cal,
             delayed_sync,
+            delayed_record
         ]
     )

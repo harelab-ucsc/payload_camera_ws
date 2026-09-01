@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+
 from pathlib import Path
+from pprint import pformat
 
 from hloc import (
     extract_features,

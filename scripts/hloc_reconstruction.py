@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import argparse
 
 from pathlib import Path
@@ -10,6 +9,7 @@ from hloc import (
     visualization,
     pairs_from_retrieval,
 )
+import pycolmap
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--images_dir", type=Path, required=True)
@@ -31,4 +31,4 @@ feature_path = extract_features.main(feature_conf, images, outputs)
 match_path = match_features.main(
     matcher_conf, sfm_pairs, feature_conf["output"], outputs
 )
-model = reconstruction.main(sfm_dir, images, sfm_pairs, feature_path, match_path)
+model = reconstruction.main(sfm_dir, images, sfm_pairs, feature_path, match_path, camera_mode=pycolmap.CameraMode.PER_FOLDER)

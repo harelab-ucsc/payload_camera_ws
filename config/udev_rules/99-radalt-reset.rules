@@ -1,0 +1,1 @@
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", RUN+="/bin/sh -c 'echo 1 > /sys/bus/usb/devices/$env{BUSNUM}-$env{DEVNUM}/authorized'"

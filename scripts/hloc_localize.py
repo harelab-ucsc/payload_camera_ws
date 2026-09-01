@@ -45,14 +45,11 @@ outputs = args.output_dir
 
 images = dataset / "images"
 queries = dataset / "queries"
-
 existing_sfm = dataset / "sparse" / "0"
 
 sfm_pairs = outputs / "pairs-db-covis20.txt"
 loc_pairs = outputs / "pairs-query-netvlad20.txt"
-
 new_sfm = outputs / "sfm_superpoint+superglue"
-
 results = outputs / "hloc_superpoint+superglue_netvlad20.txt"
 
 retrieval_conf = extract_features.confs["netvlad"]
@@ -68,18 +65,13 @@ matcher_conf = match_features.confs["superglue"]
 #   images/foo.jpg
 #   queries/bar.jpg
 # ============================================================
-
 features = extract_features.main(
     feature_conf,
     dataset,
     outputs,
 )
 
-
-# ============================================================
 # Choose the SfM model used for localization.
-# ============================================================
-
 if args.rebuild_sfm:
 
     # Build a new hloc SfM model from the existing reconstruction.
@@ -110,23 +102,15 @@ else:
     # Use the existing reconstruction directly.
     reconstruction = existing_sfm
 
-
-# ============================================================
 # Extract NetVLAD descriptors for BOTH reference and query
 # images.
-# ============================================================
-
 global_descriptors = extract_features.main(
     retrieval_conf,
     dataset,
     outputs,
 )
 
-
-# ============================================================
 # Retrieve reference images for each query.
-# ============================================================
-
 pairs_from_retrieval.main(
     global_descriptors,
     loc_pairs,
@@ -135,11 +119,7 @@ pairs_from_retrieval.main(
     query_prefix="queries",
 )
 
-
-# ============================================================
 # Match queries against retrieved reference images.
-# ============================================================
-
 loc_matches = match_features.main(
     matcher_conf,
     loc_pairs,
@@ -147,11 +127,7 @@ loc_matches = match_features.main(
     outputs,
 )
 
-
-# ============================================================
 # Localize queries against the selected reconstruction.
-# ============================================================
-
 localize_sfm.main(
     reconstruction,
     dataset / "queries/*_time_queries_with_intrinsics.txt",

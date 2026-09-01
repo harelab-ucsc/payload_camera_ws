@@ -210,10 +210,10 @@ def generate_launch_description():
 
     topics_to_record = [
         '/as7265x/calibrated_values',
-        '/cam0/camera_node/camera_info',
-        '/cam0/camera_node/image_raw',
-        '/cam1/camera_node/camera_info',
-        '/cam1/camera_node/image_raw',
+        #'/cam0/camera_node/camera_info',
+        #'/cam0/camera_node/image_raw',
+        #'/cam1/camera_node/camera_info',
+        #'/cam1/camera_node/image_raw',
         '/ins_quat_uvw_lla',
         '/odom_ins_enu',
         '/pps/time',

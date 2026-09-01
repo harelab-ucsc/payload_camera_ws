@@ -8,6 +8,6 @@ if __name__ == '__main__':
     pwm.start(100)  # full duty cycle
 
     pwm.change_duty_cycle(10)
-    pwm.change_frequency(3)
+    pwm.change_frequency(1)
 
     # pwm.stop()  # sets duty cycle to 0

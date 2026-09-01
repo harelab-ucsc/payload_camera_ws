@@ -17,3 +17,6 @@ __pycache__/
 *.png
 
 labels.txt
+
+## Custom config files
+config/birdseye_v2_camchain.yaml

@@ -9,8 +9,6 @@ onto an assumed flat ground plane at fixed height) with an actual 3D
 reconstruction, and measure whether that is more accurate — using a surveyed
 AprilTag ground-control point as truth.
 
----
-
 ## Pipeline overview
 
 ```
@@ -65,52 +63,39 @@ AprilTag ground-control point as truth.
                     residual in meters (accuracy number)
 ```
 
----
-
 ## Environment
 
-```bash
-source /home/njgachok/payload_camera_ws/.venv/bin/activate
-```
-
-Provides `pycolmap` 4.1.1, `hloc` (editable install from
-`~/Hierarchical-Localization`), `torch` + CUDA, and OpenCV 5.0 (whose
-`cv2.aruco` includes the AprilTag families — no separate apriltag package
-needed).
-
-ROS 2 (`source /opt/ros/jazzy/setup.bash`) is only needed if you want to read
-raw `.mcap` bags; the pipeline below does not require it.
+Make sure to
+1. Make a virtual environment,
+2. install all packages, including pycolmap and hloc
+3. source the virtual environment's activation script
 
 ---
 
-## [1] Postprocess a raw capture
+## 1. Postprocess a raw capture
 
-Turns a flat folder of raw images into a COLMAP-ready "project root". Run this
-once per capture (both the reference and the query capture).
-
-```bash
-scripts/uav_image_postproc/postproc.sh \
-    /datasets/<user>/<capture>/rgbs \
-    scripts/uav_image_postproc/birdseye_v2_camchain.yaml \
-    /datasets/<user>/<capture>_hloc_ref
-```
+Turns a flat folder of raw images into a COLMAP-ready "project root". (Check the
+README in the uav_image_postproc folder for information on what it does.) Run 
+this once per capture (both the reference and the query capture).
 
 Raw filenames must match `rgb_<N>_<timestamp>.jpeg` with `N` in 1..4; the four
 cameras of one frame are matched by identical timestamp.
 
-What it does:
+```bash
+./scripts/uav_image_postproc/postproc.sh \
+    /datasets/<user>/<capture>/rgbs \
+    /path/to/payload_camera_ws/config/birdseye_v2_camchain.yaml \
+    /datasets/<user>/<capture>_hloc_ref
+```
 
-1. `prepare_colmap_rig.py` — rotates every image 180° (the cameras are mounted
-   upside down), regroups into `camera1/`..`camera4/`, renames to
-   `imageNNNN.jpeg` (same name across cameras for one frame), and preserves
-   EXIF (including the GPS tags that step 3 depends on).
-2. `gen_rig_config.py` — converts the camchain YAML into COLMAP's
-   `rig_config.json` (intrinsics + `cam_from_rig` extrinsics, with the 180°
-   rotation folded in).
-3. `gen_leg_masks.py` — detects drone-leg occlusion (cameras 2 and 4 by
-   default) and writes masks plus review overlays.
+```bash
+./scripts/uav_image_postproc/postproc.sh \
+    /datasets/<user>/<capture>/rgbs \
+    /path/to/payload_camera_ws/config/birdseye_v2_camchain.yaml \
+    /datasets/<user>/<capture>_hloc_query
+```
 
-It then **pauses** so you can inspect `masks_overlays/camera{2,4}_overlay.png`.
+It then **pauses** so you can inspect the mask overlays.
 Once they look right:
 
 ```bash
@@ -123,28 +108,22 @@ Resulting project root:
 
 ```
 <project>/
-  images/cameraN/imageNNNN.jpeg     # 180°-rotated, renamed, EXIF preserved
-  masks/cameraN/imageNNNN.jpeg.png  # per-frame masks (links to canonical)
+  images/cameraN/imageNNNN.jpeg       # 180°-rotated, renamed, EXIF preserved
+  masks/cameraN/imageNNNN.jpeg.png    # per-frame masks (links to canonical)
   masks/.canonical/cameraN.{png,npy}
   masks_overlays/cameraN_overlay.png
-  rig_config.json                   # intrinsics + cam_from_rig extrinsics
-  frame_mapping.txt                 # imageNNNN.jpeg <TAB> original timestamp
+  rig_config.json                     # intrinsics + cam_from_rig extrinsics
+  frame_mapping.txt                   # imageNNNN.jpeg <TAB> original timestamp
 ```
 
----
-
-## [2] Build the reference reconstruction
+## 2. Build the reference reconstruction
 
 ```bash
 python3 scripts/hloc_reconstruction2.py \
     --dataset_dir /datasets/<user>/<capture>_hloc_ref
 ```
 
-NetVLAD retrieval (top 5) → SuperPoint features → masked → SuperGlue matching →
-rig-constrained incremental SfM. Intrinsics and `cam_from_rig` are held **fixed**
-during bundle adjustment.
-
-Writes into `<ref>/outputs/`:
+Writes into `/datasets/<user>/<capture>_hloc_ref`:
 
 ```
 global-feats-netvlad.h5
@@ -157,9 +136,7 @@ sfm_superpoint+superglue/                  # cameras/images/points3D/rigs/frames
 
 All of these are **cached** — re-running skips work that is already present.
 
----
-
-## [3] Georeference the reconstruction
+## 3. Georeference the reconstruction
 
 ```bash
 python3 scripts/georef_reconstruction.py \
@@ -178,7 +155,7 @@ translation, and the ENU reference lat/lon/alt).
 
 ---
 
-## [4] Localize a query capture against the reference
+## 4. Localize a query capture against the reference
 
 ```bash
 python3 scripts/hloc_localize2.py \
@@ -201,18 +178,20 @@ localization_results.csv    # per-frame rig pose in the reference SfM frame
 localization_summary.txt
 ```
 
-`localization_results.csv` is *not* a plain CSV: the quaternion and translation
-are each packed into a single comma-delimited field as whitespace-separated
-components. Use `georef_common.read_localization_results()` rather than parsing
-it by hand.
+`localization_results.csv` is a plain CSV — one field per column, matching its
+header. You should prefer `georef_common.read_localization_results()` over parsing it by
+hand; it returns `rig_from_world` as a `pycolmap.Rigid3d` (handling the
+`[w,x,y,z]` → `[x,y,z,w]` quaternion reordering) and still reads files written
+by older runs, which packed `qw..qz` and `tx..tz` into two whitespace-separated
+fields.
 
 Runtime is dominated by SuperGlue matching (query_images × 20 pairs; ~30k pairs
-≈ 15-20 min on an RTX 3070). Matching results are cached, so a re-run that only
+= around 15-20 min on an RTX 3070). Matching results are cached, so a re-run that only
 changes pose estimation is fast.
 
 ---
 
-## [5] Convert localized poses to real-world coordinates
+## 5. Convert localized poses to real-world coordinates
 
 ```bash
 python3 scripts/georef_localized_poses.py \
@@ -228,7 +207,7 @@ naive min/max statistics.
 
 ---
 
-## [6] Validate against a surveyed AprilTag
+## 6. Validate against a surveyed AprilTag
 
 ```bash
 python3 scripts/validate_gcp_apriltag.py \
@@ -304,7 +283,7 @@ Measured scale is roughly **uniform** rather than drifting (median local scale
 6.65 across the trajectory vs. 6.55 global; thirds at 6.70 / 6.38 / 6.92), so
 the similarity fit in step 3 does absorb most of it.
 
-The principled fix is to constrain the reconstruction with the RTK GPS positions
+Possible fix: constrain the reconstruction with the RTK GPS positions
 as **pose priors during mapping** (`pycolmap.PosePrior` with
 `PosePriorCoordinateSystem.WGS84`, plus
 `IncrementalPipelineOptions.use_prior_position=True` and

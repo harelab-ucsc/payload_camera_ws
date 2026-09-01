@@ -4,6 +4,7 @@ import argparse
 import csv
 from collections import defaultdict
 import json
+import pickle
 import re
 from pathlib import Path
 
@@ -152,8 +153,11 @@ def get_query_correspondences(
     kpq += 0.5  # COLMAP coordinates
 
     kp_idx_to_3D = defaultdict(list)
+    # query keypoint idx -> 3D point id -> indices *into db_ids* that observe
+    # it. hloc's visualization expects db indices, not image ids.
+    kp_idx_to_3D_to_db = defaultdict(lambda: defaultdict(list))
     num_matches = 0
-    for db_id in db_ids:
+    for db_idx, db_id in enumerate(db_ids):
         image = reconstruction.images[db_id]
         if image.num_points3D == 0:
             continue
@@ -168,6 +172,7 @@ def get_query_correspondences(
 
         for query_idx, ref_idx in matches:
             point3D_id = points3D_ids[ref_idx]
+            kp_idx_to_3D_to_db[query_idx][point3D_id].append(db_idx)
             # avoid duplicate observations
             if point3D_id not in kp_idx_to_3D[query_idx]:
                 kp_idx_to_3D[query_idx].append(point3D_id)
@@ -180,6 +185,13 @@ def get_query_correspondences(
             query_idxs.append(query_idx)
             point3D_ids.append(point3D_id)
 
+    # Parallel to (query_idxs, point3D_ids): which db images observe each.
+    mkp_to_3D_to_db = [
+        (pid, kp_idx_to_3D_to_db[qi][pid])
+        for qi in kp_idx_to_3D
+        for pid in kp_idx_to_3D[qi]
+    ]
+
     points2D = kpq[query_idxs]
     points3D = np.array([
         reconstruction.points3D[pid].xyz for pid in point3D_ids
@@ -190,6 +202,10 @@ def get_query_correspondences(
         "points3D": points3D,
         "point3D_ids": np.asarray(point3D_ids),
         "num_matches": num_matches,
+        # extras needed to emit an hloc-compatible _logs.pkl
+        "db_ids": list(db_ids),
+        "mkp_idxs": query_idxs,
+        "mkp_to_3D_to_db": mkp_to_3D_to_db,
     }
     return log
 
@@ -256,6 +272,10 @@ def localize_rig_frame(frame_queries, context):
     all_camera_idxs = []
 
     per_camera = {}
+    # (query_name, corrs, slice into the concatenated correspondence arrays),
+    # used afterwards to split the rig-wide inlier mask back out per image.
+    log_parts = []
+    offset = 0
 
     for camera_name, query_name in sorted(frame_queries.items()):
         physical_camera = camera_number(camera_name)
@@ -284,9 +304,11 @@ def localize_rig_frame(frame_queries, context):
         all_points2D.append(corrs["points2D"])
         all_points3D.append(corrs["points3D"])
         all_camera_idxs.append(np.full(n, camera_idx, dtype=int))
+        log_parts.append((query_name, corrs, slice(offset, offset + n)))
+        offset += n
 
     if not all_points2D:
-        return None, per_camera
+        return None, per_camera, {}
 
     points2D = np.concatenate(all_points2D, axis=0)
     points3D = np.concatenate(all_points3D, axis=0)
@@ -305,7 +327,32 @@ def localize_rig_frame(frame_queries, context):
         estimation_options=ransac_options,
     )
 
-    return ret, per_camera
+    # Per-image logs in hloc's format, so hloc.visualization.visualize_loc can
+    # render these results. The rig solve produces one inlier mask over all
+    # cameras' correspondences concatenated, so slice it back per image.
+    logs = {}
+    if ret is not None:
+        inlier_mask = np.asarray(ret["inlier_mask"])
+        for query_name, corrs, sl in log_parts:
+            # key by the on-disk name; the QUERY_PREFIX only exists to keep
+            # query and reference h5 keys from colliding
+            name = query_name[len(QUERY_PREFIX):] if query_name.startswith(QUERY_PREFIX) else query_name
+            logs[name] = {
+                "db": corrs["db_ids"],
+                "PnP_ret": {
+                    "success": True,
+                    "inlier_mask": inlier_mask[sl],
+                    "num_inliers": int(inlier_mask[sl].sum()),
+                    "cam_from_world": ret["rig_from_world"],
+                },
+                "keypoints_query": corrs["points2D"],
+                "points3D_ids": corrs["point3D_ids"],
+                "points3D_xyz": None,
+                "num_matches": corrs["num_matches"],
+                "keypoint_index_to_db": (corrs["mkp_idxs"], corrs["mkp_to_3D_to_db"]),
+            }
+
+    return ret, per_camera, logs
 
 def quaternion_to_rotation(qw, qx, qy, qz):
     """Convert a wxyz quaternion to a 3x3 rotation matrix."""
@@ -406,8 +453,13 @@ def write_summary(results_path, output_path):
 
 
 def write_results(results_path, frames, context):
-    """Localize each rig frame and write per-frame results to a CSV file."""
+    """Localize each rig frame and write per-frame results to a CSV file.
+
+    Also writes an hloc-compatible "<results_path>_logs.pkl" so the results can
+    be rendered with hloc.visualization.visualize_loc.
+    """
     num_successes = 0
+    all_logs = {}
 
     with open(results_path, "w") as f:
         f.write(
@@ -419,10 +471,12 @@ def write_results(results_path, frames, context):
         )
 
         for frame_name, frame_queries in sorted(frames.items()):
-            ret, camera_log = localize_rig_frame(frame_queries, context)
+            ret, camera_log, frame_logs = localize_rig_frame(frame_queries, context)
             if ret is None:
                 print(f"Frame {frame_name}: localization failed")
                 continue
+
+            all_logs.update(frame_logs)
 
             num_inliers = ret.get("num_inliers", -1)
 
@@ -453,6 +507,11 @@ def write_results(results_path, frames, context):
                 f"{matches.get(3, 0)},{matches.get(4, 0)}\n"
             )
             num_successes += 1
+
+    logs_path = f"{results_path}_logs.pkl"
+    with open(logs_path, "wb") as f:
+        pickle.dump({"loc": all_logs}, f)
+    print(f"Wrote {logs_path} ({len(all_logs)} query images)")
 
     return num_successes
 

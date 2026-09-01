@@ -176,6 +176,7 @@ pairs-query-netvlad20.txt
 matches-query-superglue.h5
 localization_results.csv    # per-frame rig pose in the reference SfM frame
 localization_summary.txt
+localization_results.csv_logs.pkl   # hloc-format log, for visualization
 ```
 
 `localization_results.csv` is a plain CSV — one field per column, matching its
@@ -239,6 +240,42 @@ Columns 2 and 3 differ by ~30.7m, the local geoid separation. Column 2 is the
 correct one to feed to `GPSTransform.ellipsoid_to_enu()`, and it matches the
 datum of the INS `lla[2]` behind the image EXIF altitudes. Using column 3
 instead moves the answer ~26m vertically.
+
+---
+
+## 7. Visual QA and the reprojection metric
+
+```bash
+python3 scripts/visualize_localization.py --mode all \
+    --query_dir        /datasets/<user>/<query>_hloc_query \
+    --reference_dir    /datasets/<user>/<capture>_hloc_ref \
+    --localization_dir /datasets/<user>/<query>_hloc_query/outputs_vs_roof \
+    --georef_transform /datasets/<user>/<capture>_hloc_ref/outputs/georef_transform.json \
+    --click_gcps_csv   /datasets/<user>/<query>/click_gcps.csv \
+    --output_dir       /datasets/<user>/<query>_hloc_query/outputs_vs_roof/viz \
+    --num_frames 6
+```
+
+Three modes (`--mode sfm|loc|gcp|all`):
+
+- **`sfm`** — reference reconstruction keypoints coloured by visibility or
+  track length, via hloc's `visualize_sfm_2d`. Sanity-checks the model.
+- **`loc`** — query/reference correspondences coloured by PnP inlier status
+  (green = inlier), via hloc's `visualize_loc_from_log`, reading the
+  `_logs.pkl` from step 4.
+- **`gcp`** — reprojects the surveyed GCP into every query image that saw the
+  AprilTag and draws it against the detected tag centre.
+
+`gcp` mode is the one that yields a **metric**: the pixel gap between the
+detected tag and the reprojected surveyed GCP, per image. It is independent of
+the triangulation in step 6, so it serves as a cross-check rather than a
+restatement — and it converts each pixel error to an approximate ground
+distance using that observation's range. It also writes
+`gcp_reprojection_errors.csv` with every detection so the distribution can be
+inspected rather than trusting a single summary number.
+
+Note `visualize_localization.py` runs its own AprilTag detection rather than
+reusing step 6's, so the two are independent measurements of the same quantity.
 
 ---
 

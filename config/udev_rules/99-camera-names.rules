@@ -1,0 +1,5 @@
+# Symlink for the camera on CSI0 (1f00110000)
+SUBSYSTEM=="video4linux", KERNELS=="1f00110000.csi", SYMLINK+="video_csi0"
+
+# Symlink for the camera on CSI1 (1f00128000)
+SUBSYSTEM=="video4linux", KERNELS=="1f00128000.csi", SYMLINK+="video_csi1"

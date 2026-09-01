@@ -336,18 +336,15 @@ def write_summary(results_path, output_path):
     """Write a human-readable summary of rig localization poses."""
     poses = []
 
-    # NOTE: write_results packs qw,qx,qy,qz and tx,ty,tz as single
-    # whitespace-separated CSV fields (not one field per component), so this
-    # must be parsed as CSV plus a secondary whitespace split, not by
-    # splitting the raw line on whitespace alone.
     with open(results_path, newline="") as f:
         reader = csv.reader(f)
-        next(reader)  # header
+        header = next(reader)
 
         for row in reader:
-            name = row[0]
-            qw, qx, qy, qz = (float(v) for v in row[1].split())
-            tx, ty, tz = (float(v) for v in row[2].split())
+            record = dict(zip(header, row))
+            name = record["frame"]
+            qw, qx, qy, qz = (float(record[key]) for key in ("qw", "qx", "qy", "qz"))
+            tx, ty, tz = (float(record[key]) for key in ("tx", "ty", "tz"))
 
             rotation = quaternion_to_rotation(qw, qx, qy, qz)
             translation = np.array([tx, ty, tz])
@@ -447,9 +444,9 @@ def write_results(results_path, frames, context):
 
             f.write(
                 f"{frame_name},"
-                f"{qw} {qx} {qy} {qz},"
-                f"{t[0]} {t[1]} {t[2]},"
-                f"{num_inliers}, {total_corrs}, {inlier_ratio},"
+                f"{qw},{qx},{qy},{qz},"
+                f"{t[0]},{t[1]},{t[2]},"
+                f"{num_inliers},{total_corrs},{inlier_ratio},"
                 f"{corrs.get(1, 0)},{corrs.get(2, 0)},"
                 f"{corrs.get(3, 0)},{corrs.get(4, 0)},"
                 f"{matches.get(1, 0)},{matches.get(2, 0)},"

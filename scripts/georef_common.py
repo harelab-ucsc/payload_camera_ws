@@ -71,6 +71,18 @@ def load_georef_transform(path):
     return sim3d, ref_lla
 
 
+def _unpack_legacy_pose_fields(row):
+    """Split the packed pose fields written by older hloc_localize2.py runs.
+
+    write_results used to emit qw,qx,qy,qz and tx,ty,tz as two
+    whitespace-joined fields even though the header named them as seven
+    separate columns, so old files have 14 fields per row against a 19-column
+    header. Splitting those two fields restores the column-for-column layout
+    the header describes.
+    """
+    return [row[0], *row[1].split(), *row[2].split(), *row[3:]]
+
+
 def read_localization_results(csv_path):
     """Parse localization_results.csv from hloc_localize2.py.
 
@@ -79,22 +91,23 @@ def read_localization_results(csv_path):
     """
     frames = []
 
-    # NOTE: the data rows pack qw,qx,qy,qz and tx,ty,tz as single
-    # whitespace-separated CSV fields, while the header spells them out as
-    # separate comma-separated columns -- the two do not line up
-    # column-for-column, so we parse positionally rather than by header name.
     with open(csv_path, newline="") as f:
         reader = csv.reader(f)
-        header = next(reader)
+        header = [field.strip() for field in next(reader)]
         assert header[0] == "frame", f"Unexpected localization_results.csv header: {header}"
 
         for row in reader:
-            name = row[0]
-            qw, qx, qy, qz = (float(x) for x in row[1].split())
-            tx, ty, tz = (float(x) for x in row[2].split())
-            num_inliers = int(row[3])
-            total_corrs = int(row[4].strip())
-            inlier_ratio = float(row[5].strip())
+            if len(row) < len(header):
+                row = _unpack_legacy_pose_fields(row)
+
+            record = {key: value.strip() for key, value in zip(header, row)}
+
+            name = record["frame"]
+            qw, qx, qy, qz = (float(record[key]) for key in ("qw", "qx", "qy", "qz"))
+            tx, ty, tz = (float(record[key]) for key in ("tx", "ty", "tz"))
+            num_inliers = int(record["num_inliers"])
+            total_corrs = int(record["total_corrs"])
+            inlier_ratio = float(record["inlier_ratio"])
 
             rotation = pycolmap.Rotation3d(np.array([qx, qy, qz, qw]))
             rig_from_world = pycolmap.Rigid3d(rotation, np.array([tx, ty, tz]))

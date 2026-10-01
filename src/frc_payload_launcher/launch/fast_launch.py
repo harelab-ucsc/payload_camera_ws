@@ -108,11 +108,11 @@ def generate_launch_description():
             # Sensor max is 199977 µs (≈5 fps); actual capture rate is set by
             # the external PWM trigger in rpi_pwm_interface.py (currently 3 Hz).
             {"FrameDurationLimits": [199977, 199977]},
-            {"AeEnable": False},
-            {"ExposureTimeMode": 1},
-            {"AnalogueGainMode": 1},
-            {"ExposureTime": 1000},
-            {"AnalogueGain": 1.0},
+#            {"AeEnable": False},
+#            {"ExposureTimeMode": 1},
+#            {"AnalogueGainMode": 1},
+#            {"ExposureTime": 1000},
+#            {"AnalogueGain": 1.0},
             {"jpeg_quality": 15},
 
         ],
@@ -161,13 +161,13 @@ def generate_launch_description():
     # NOTE: place the panel flat on the ground below the hovering drone,
     # in direct sunlight with NO shadow on the reflective surface.
     # ------------------------------------------------------------------
-#    panel_scan = Node(
-#        package="mica_crp_cal",
-#        executable="panel_scan",
-#        name="panel_scan",
-#        output="screen",
-#        parameters=[{"force_cal": force_cal}],
-#    )
+    panel_scan = Node(
+        package="mica_crp_cal",
+        executable="panel_scan",
+        name="panel_scan",
+        output="screen",
+        parameters=[{"force_cal": force_cal}],
+    )
 
     # ------------------------------------------------------------------
     # AutoCalNode — exposure lock + irradiance reference at 6 m AGL.
@@ -178,13 +178,13 @@ def generate_launch_description():
     # for stream_processor's per-cycle irradiance ratio correction.
     # Starts at t=6 s so both cameras are live and publishing.
     # ------------------------------------------------------------------
-#    auto_cal = Node(
-#        package="mica_crp_cal",
-#        executable="auto_cal",
-#        name="auto_cal",
-#        output="screen",
-#        parameters=[{"force_cal": force_cal}],
-#    )
+    auto_cal = Node(
+        package="mica_crp_cal",
+        executable="auto_cal",
+        name="auto_cal",
+        output="screen",
+        parameters=[{"force_cal": force_cal}],
+    )
 
     # ------------------------------------------------------------------
     # stream_processor — PPS-synced save node (does split + spectral
@@ -284,31 +284,31 @@ def generate_launch_description():
     # panel_scan and auto_cal both start at t=6 s (both cameras live).
     # panel_scan self-gates on /cal/exposure_locked published by auto_cal,
     # so the actual QR scan window only opens after cameras are locked.
- #   delayed_panel_scan = RegisterEventHandler(
- #       OnProcessStart(
- #           target_action=pps,
- #           on_start=[
- #               TimerAction(
- #                   period=6.0,
- #                   actions=[panel_scan],
- #               )
- #           ],
- #       )
- #   )
+    delayed_panel_scan = RegisterEventHandler(
+        OnProcessStart(
+            target_action=pps,
+            on_start=[
+                TimerAction(
+                    period=6.0,
+                    actions=[panel_scan],
+                )
+            ],
+        )
+    )
 
     # auto_cal starts at t=6 s and self-gates on radalt > 6 m before running
     # the exposure binary search.
- #   delayed_auto_cal = RegisterEventHandler(
- #       OnProcessStart(
- #           target_action=pps,
- #           on_start=[
- #               TimerAction(
- #                   period=6.0,
- #                   actions=[auto_cal],
- #               )
- #           ],
- #       )
- #   )
+    delayed_auto_cal = RegisterEventHandler(
+        OnProcessStart(
+            target_action=pps,
+            on_start=[
+                TimerAction(
+                    period=6.0,
+                    actions=[auto_cal],
+                )
+            ],
+        )
+    )
 
     return LaunchDescription(
         [
@@ -322,8 +322,8 @@ def generate_launch_description():
             inertial_sense_node,
             delayed_cam0,
             delayed_cam1,
-      #      delayed_panel_scan,
-      #      delayed_auto_cal,
+            delayed_panel_scan,
+            delayed_auto_cal,
             delayed_sync,
             delayed_record
         ]

@@ -153,7 +153,7 @@ def generate_launch_description():
     # ------------------------------------------------------------------
     # MicaCRPCal — panel scan node.
     # Waits for /cal/exposure_locked from auto_cal (published once cameras are
-    # locked at flight exposure settings at 6 m AGL), then opens a 30 s window
+    # locked at flight exposure settings at 1.5 m AGL), then opens a 60 s window
     # to detect the CRP QR tag via cam0.  On confirmation it extracts per-band
     # panel DN at the locked exposure, applies the certified CRP albedo, and
     # publishes 4 reflectance correction factors on /panel_cal/irradiance
@@ -170,7 +170,7 @@ def generate_launch_description():
     )
 
     # ------------------------------------------------------------------
-    # AutoCalNode — exposure lock + irradiance reference at 6 m AGL.
+    # AutoCalNode — exposure lock + irradiance reference at 1.2–2.0 m AGL.
     # Subscribes to radalt, cam0, cam1, and the spectrometer. Waits for the
     # drone to clear 6 m, binary-searches ExposureTime and AnalogueGain for
     # each camera (preferring low gain to minimise noise), locks both cameras,
